@@ -1,0 +1,78 @@
+create table if not exists public.stories (
+  id text primary key,
+  created_at timestamptz not null default now(),
+  report_month text not null,
+  division text not null,
+  owner text not null,
+  email text not null,
+  title text not null,
+  period text not null,
+  participants text not null,
+  summary text not null,
+  impact_metric text not null,
+  evidence text not null,
+  culture_value text not null,
+  quote text not null,
+  desired_message text not null,
+  image_name text,
+  image_url text
+);
+
+create table if not exists public.cards (
+  id text primary key,
+  story_id text references public.stories(id) on delete set null,
+  created_at timestamptz not null default now(),
+  title text not null,
+  division text not null,
+  template_id text not null,
+  tone text not null,
+  prompt text not null,
+  image_url text not null
+);
+
+alter table public.stories enable row level security;
+alter table public.cards enable row level security;
+
+drop policy if exists "Anyone can read stories" on public.stories;
+drop policy if exists "Anyone can submit stories" on public.stories;
+drop policy if exists "Anyone can read cards" on public.cards;
+drop policy if exists "Anyone can save cards" on public.cards;
+
+create policy "Anyone can read stories"
+on public.stories
+for select
+using (true);
+
+create policy "Anyone can submit stories"
+on public.stories
+for insert
+with check (true);
+
+create policy "Anyone can read cards"
+on public.cards
+for select
+using (true);
+
+create policy "Anyone can save cards"
+on public.cards
+for insert
+with check (true);
+
+insert into storage.buckets (id, name, public)
+values
+  ('story-images', 'story-images', true),
+  ('card-images', 'card-images', true)
+on conflict (id) do update set public = excluded.public;
+
+drop policy if exists "Anyone can read card news images" on storage.objects;
+drop policy if exists "Anyone can upload card news images" on storage.objects;
+
+create policy "Anyone can read card news images"
+on storage.objects
+for select
+using (bucket_id in ('story-images', 'card-images'));
+
+create policy "Anyone can upload card news images"
+on storage.objects
+for insert
+with check (bucket_id in ('story-images', 'card-images'));
