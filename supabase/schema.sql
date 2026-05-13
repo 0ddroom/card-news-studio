@@ -14,6 +14,7 @@ create table if not exists public.stories (
   culture_value text not null,
   quote text not null,
   desired_message text not null,
+  password_hash text,
   image_name text,
   image_url text
 );
@@ -48,6 +49,42 @@ on public.stories
 for insert
 with check (true);
 
+create extension if not exists pgcrypto with schema extensions;
+
+create or replace function public.delete_story_with_password(target_story_id text, plain_password text)
+returns boolean
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  stored_hash text;
+  input_hash text;
+begin
+  select password_hash
+  into stored_hash
+  from public.stories
+  where id = target_story_id;
+
+  if stored_hash is null or stored_hash = '' then
+    return false;
+  end if;
+
+  input_hash := encode(digest(plain_password, 'sha256'), 'hex');
+
+  if input_hash <> stored_hash then
+    return false;
+  end if;
+
+  delete from public.stories
+  where id = target_story_id;
+
+  return true;
+end;
+$$;
+
+grant execute on function public.delete_story_with_password(text, text) to anon, authenticated;
+
 create policy "Anyone can read cards"
 on public.cards
 for select
@@ -66,6 +103,7 @@ on conflict (id) do update set public = excluded.public;
 
 drop policy if exists "Anyone can read card news images" on storage.objects;
 drop policy if exists "Anyone can upload card news images" on storage.objects;
+drop policy if exists "Anyone can update card news images" on storage.objects;
 
 create policy "Anyone can read card news images"
 on storage.objects
@@ -75,4 +113,10 @@ using (bucket_id in ('story-images', 'card-images'));
 create policy "Anyone can upload card news images"
 on storage.objects
 for insert
+with check (bucket_id in ('story-images', 'card-images'));
+
+create policy "Anyone can update card news images"
+on storage.objects
+for update
+using (bucket_id in ('story-images', 'card-images'))
 with check (bucket_id in ('story-images', 'card-images'));

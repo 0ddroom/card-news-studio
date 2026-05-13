@@ -3,50 +3,40 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Card News Studio | 성과 스토리 취합 및 제작</title>
+    <title>성공로그 | 성과창출 사례 공유</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <div class="app-shell">
       <header class="hero">
         <nav class="topbar" aria-label="주요 메뉴">
-          <a class="brand" href="#dashboard" data-view-link="dashboard" aria-label="Card News Studio 홈">
-            <span class="brand-mark">CN</span>
-            <span>
-              <strong>Card News Studio</strong>
-              <small>성과 스토리 취합 & 제작</small>
-            </span>
-          </a>
           <div class="nav-actions">
-            <button class="nav-link is-active" type="button" data-view-link="dashboard">대시보드</button>
-            <button class="nav-link" type="button" data-view-link="collect">스토리 제출</button>
-            <button class="nav-link" type="button" data-view-link="archive">취합 목록</button>
-            <button class="nav-link" type="button" data-view-link="studio">카드뉴스 제작</button>
-            <button class="nav-link" type="button" data-view-link="gallery">저장함</button>
+            <button class="nav-link is-active" type="button" data-view-link="dashboard">홈 화면</button>
+            <button class="nav-link" type="button" data-view-link="collect">사례 공유</button>
+            <button class="nav-link" type="button" data-view-link="archive">공유된 사례 보기</button>
+            <button class="nav-link" type="button" data-view-link="studio">카드뉴스 시안 제작</button>
+            <button class="nav-link" type="button" data-view-link="gallery">공유된 시안 보기</button>
           </div>
         </nav>
 
         <section class="hero-grid">
           <div class="hero-copy">
-            <p class="eyebrow">Monthly culture & performance digest</p>
-            <h1>본부/실의 의미 있는 순간을 한 장의 카드뉴스로.</h1>
+            <p class="eyebrow success-log-eyebrow">
+              <span>성</span>과 <span>공</span>유 <span>log</span>
+            </p>
+            <h1>
+              <span class="hero-title-main">성공로그</span>
+              <span class="hero-title-separator">:</span>
+              <span class="hero-title-sub">성과창출 사례 및 의미 있는 시도들</span>
+            </h1>
             <p>
-              각 조직의 성과, 활동, 협업 이야기를 정해진 템플릿으로 취합하고
-              카드뉴스 제작 담당자가 바로 이미지 콘셉트와 최종 결과물을 만들 수 있게 설계했습니다.
+              각 소속별로 자랑하고 싶은 사례(고객 가치 혁신 관련 성과 및 활동)를 공유해주세요!
             </p>
             <div class="hero-actions">
-              <button class="primary-action" type="button" data-view-link="collect">스토리 제출하기</button>
-              <button class="secondary-action" type="button" data-view-link="studio">카드뉴스 제작하기</button>
+              <button class="primary-action" type="button" data-view-link="collect">사례 공유하기</button>
+              <button class="secondary-action" type="button" data-view-link="studio">카드뉴스 시안 제작해보기</button>
             </div>
           </div>
-          <aside class="hero-card" aria-label="운영 원칙">
-            <span class="card-kicker">운영 원칙</span>
-            <h2>좋은 카드뉴스는 좋은 질문에서 시작합니다.</h2>
-            <p>
-              "무엇을 했는가"보다 "왜 의미 있었는가"를 묻도록 입력칸을 구성했습니다.
-              덕분에 단순 홍보가 아니라 조직 안에 공유할 만한 학습과 자부심이 남습니다.
-            </p>
-          </aside>
         </section>
       </header>
 
@@ -54,57 +44,34 @@
         <section class="view is-visible" id="dashboard" aria-labelledby="dashboard-title">
           <div class="section-heading">
             <p class="eyebrow">Overview</p>
-            <h2 id="dashboard-title">이번 달 카드뉴스 운영 현황</h2>
-            <p>취합된 스토리와 제작 완료된 카드뉴스를 한눈에 확인합니다.</p>
+            <h2 id="dashboard-title">이달의 성공로그 수집 현황</h2>
+            <p>수집된 사례와 제작된 카드뉴스 시안 수를 한눈에 확인합니다.</p>
           </div>
 
           <div class="metric-grid">
             <article class="metric-card">
-              <span>취합된 스토리</span>
+              <span>수집된 사례</span>
               <strong id="storyCount">0</strong>
-              <small>본부/실 제출 건수</small>
+              <small>공유된 사례 수</small>
             </article>
             <article class="metric-card">
-              <span>제작 완료</span>
+              <span>카드뉴스 시안 제작</span>
               <strong id="cardCount">0</strong>
-              <small>저장된 카드뉴스</small>
+              <small>공유된 카드뉴스 시안 수</small>
             </article>
             <article class="metric-card">
-              <span>참여 조직</span>
+              <span>참여 소속</span>
               <strong id="divisionCount">0</strong>
-              <small>고유 본부/실 수</small>
-            </article>
-            <article class="metric-card">
-              <span>저장 방식</span>
-              <strong id="storageMode">로컬</strong>
-              <small id="storageHint">현재 브라우저에 저장</small>
-            </article>
-          </div>
-
-          <div class="workflow">
-            <article>
-              <span>01</span>
-              <h3>스토리 취합</h3>
-              <p>담당자가 월별 성과, 활동 배경, 숫자 성과, 조직문화 메시지를 빠짐없이 입력합니다.</p>
-            </article>
-            <article>
-              <span>02</span>
-              <h3>AI 제작 준비</h3>
-              <p>제출된 내용을 기반으로 이미지 생성 프롬프트와 카드뉴스 문구를 자동 정리합니다.</p>
-            </article>
-            <article>
-              <span>03</span>
-              <h3>확정 및 저장</h3>
-              <p>템플릿을 고르고 미리보기를 생성한 뒤 PNG 다운로드 또는 저장함 보관을 진행합니다.</p>
+              <small>참여 본부/실 수</small>
             </article>
           </div>
         </section>
 
         <section class="view" id="collect" aria-labelledby="collect-title">
           <div class="section-heading compact">
-            <p class="eyebrow">Submission template</p>
-            <h2 id="collect-title">본부/실 성과 스토리 제출</h2>
-            <p>아래 칸은 카드뉴스 제작에 필요한 핵심 재료입니다. 빠진 칸이 있으면 제출 전에 알려드릴게요.</p>
+            <p class="eyebrow">사례 공유 노트</p>
+            <h2 id="collect-title">성과 및 활동 사례 공유</h2>
+            <p>필수 항목(*)은 빠짐없이 작성 부탁드립니다!</p>
           </div>
 
           <div class="form-layout">
@@ -112,106 +79,104 @@
               <div class="alert-panel" id="validationAlert" role="alert" aria-live="polite" hidden></div>
 
               <table class="template-table">
-                <caption>성과 스토리 입력 템플릿</caption>
+                <caption>성과 및 활동 사례 공유 입력 템플릿</caption>
                 <tbody>
                   <tr>
-                    <th scope="row"><label for="reportMonth">제출 월</label></th>
-                    <td><input id="reportMonth" name="reportMonth" type="month" data-label="제출 월" required /></td>
-                    <th scope="row"><label for="division">본부/실</label></th>
+                    <th scope="row"><label for="reportMonth">공유 월 *</label></th>
+                    <td><input id="reportMonth" name="reportMonth" type="month" data-label="공유 월" required /></td>
+                    <th scope="row"><label for="division">소속 *</label></th>
                     <td>
-                      <select id="division" name="division" data-label="본부/실" required>
+                      <select id="division" name="division" data-label="소속" required>
                         <option value="">선택해 주세요</option>
-                        <option>경영지원실</option>
-                        <option>인사/조직문화실</option>
-                        <option>영업본부</option>
-                        <option>마케팅본부</option>
-                        <option>제품본부</option>
-                        <option>개발본부</option>
-                        <option>고객경험실</option>
-                        <option>재무실</option>
-                        <option>전략기획실</option>
+                        <option>경영기획실</option>
+                        <option>경영관리실</option>
+                        <option>eBiz본부</option>
+                        <option>점포사업본부</option>
+                        <option>IT지원실</option>
+                        <option>정보보안실</option>
                       </select>
                     </td>
                   </tr>
                   <tr>
-                    <th scope="row"><label for="owner">담당자 이름</label></th>
-                    <td><input id="owner" name="owner" type="text" placeholder="예: 김하나" data-label="담당자 이름" required /></td>
-                    <th scope="row"><label for="email">담당자 이메일</label></th>
-                    <td><input id="email" name="email" type="email" placeholder="name@company.com" data-label="담당자 이메일" required /></td>
+                    <th scope="row"><label for="owner">소속(팀/점/파트) *</label></th>
+                    <td><input id="owner" name="owner" type="text" placeholder="예: 인사지원팀" data-label="소속(팀/점/파트)" required /></td>
+                    <th scope="row"><label for="email">이름 *</label></th>
+                    <td><input id="email" name="email" type="text" placeholder="예: 김하나" data-label="이름" required /></td>
                   </tr>
                   <tr>
-                    <th scope="row"><label for="title">성과/활동 제목</label></th>
+                    <th scope="row"><label for="title">성과/활동 제목 *</label></th>
                     <td colspan="3">
                       <input id="title" name="title" type="text" placeholder="예: 고객 응답 시간을 절반으로 줄인 개선 프로젝트" data-label="성과/활동 제목" required />
                     </td>
                   </tr>
                   <tr>
-                    <th scope="row"><label for="period">활동 기간</label></th>
+                    <th scope="row"><label for="period">활동 기간 *</label></th>
                     <td><input id="period" name="period" type="text" placeholder="예: 2026.04.01~04.30" data-label="활동 기간" required /></td>
-                    <th scope="row"><label for="participants">참여 인원/대상</label></th>
-                    <td><input id="participants" name="participants" type="text" placeholder="예: CX실 12명, 영업본부 협업" data-label="참여 인원/대상" required /></td>
+                    <th scope="row"><label for="participants">참여 인원/대상 *</label></th>
+                    <td><input id="participants" name="participants" type="text" placeholder="예: 마케팅지원단 6명, 점포사업본부 협업 등" data-label="참여 인원/대상" required /></td>
                   </tr>
                   <tr>
-                    <th scope="row"><label for="summary">핵심 이야기</label></th>
+                    <th scope="row"><label for="summary">핵심 이야기 *</label></th>
                     <td colspan="3">
                       <textarea id="summary" name="summary" rows="4" placeholder="무엇을 했고, 어떤 문제가 해결되었는지 구체적으로 적어주세요." data-label="핵심 이야기" required></textarea>
                     </td>
                   </tr>
                   <tr>
-                    <th scope="row"><label for="impactMetric">숫자 성과</label></th>
+                    <th scope="row"><label for="impactMetric">정량적 성과</label></th>
                     <td colspan="3">
-                      <input id="impactMetric" name="impactMetric" type="text" placeholder="예: 처리시간 42% 단축, 만족도 4.8점, 비용 1.2억 절감" data-label="숫자 성과" required />
+                      <input id="impactMetric" name="impactMetric" type="text" placeholder="예: 처리시간 42% 단축, 만족도 4.8점, 비용 1.2억 절감" data-label="정량적 성과" />
                     </td>
                   </tr>
                   <tr>
-                    <th scope="row"><label for="evidence">근거/에피소드</label></th>
+                    <th scope="row"><label for="evidence">근거/에피소드 *</label></th>
                     <td colspan="3">
                       <textarea id="evidence" name="evidence" rows="3" placeholder="성과를 보여주는 데이터, 현장 반응, 고객 피드백, 구성원 에피소드를 적어주세요." data-label="근거/에피소드" required></textarea>
                     </td>
                   </tr>
                   <tr>
-                    <th scope="row"><label for="cultureValue">조직문화 메시지</label></th>
+                    <th scope="row"><label for="quote">고객/직원의 한마디</label></th>
                     <td colspan="3">
-                      <textarea id="cultureValue" name="cultureValue" rows="3" placeholder="이 이야기가 우리 조직의 어떤 가치, 일하는 방식, 배움과 연결되는지 적어주세요." data-label="조직문화 메시지" required></textarea>
+                      <input id="quote" name="quote" type="text" placeholder="관련된 고객 또는 직원의 한 마디가 있다면 적어 주세요" data-label="고객/직원의 한마디" />
                     </td>
                   </tr>
                   <tr>
-                    <th scope="row"><label for="quote">담당자 한마디</label></th>
+                    <th scope="row"><label for="desiredMessage">강조하고 싶은 문구 *</label></th>
                     <td colspan="3">
-                      <input id="quote" name="quote" type="text" placeholder="예: 작은 개선을 함께 반복하니 고객 경험이 눈에 띄게 달라졌습니다." data-label="담당자 한마디" required />
+                      <input id="desiredMessage" name="desiredMessage" type="text" placeholder="카드뉴스에 가장 크게 보여주고 싶은 문장을 적어주세요." data-label="강조하고 싶은 문구" required />
                     </td>
                   </tr>
                   <tr>
-                    <th scope="row"><label for="desiredMessage">카드뉴스 핵심 문구</label></th>
-                    <td colspan="3">
-                      <input id="desiredMessage" name="desiredMessage" type="text" placeholder="카드뉴스에 가장 크게 보여주고 싶은 문장을 적어주세요." data-label="카드뉴스 핵심 문구" required />
-                    </td>
-                  </tr>
-                  <tr>
-                    <th scope="row"><label for="referenceImage">참고 이미지</label></th>
+                    <th scope="row"><label for="referenceImage">참고 이미지 *</label></th>
                     <td colspan="3">
                       <input id="referenceImage" name="referenceImage" type="file" accept="image/*" data-label="참고 이미지" required />
                       <p class="input-hint">현장 사진, 결과물 캡처, 활동 이미지 등을 업로드해 주세요. 저장 전 자동으로 용량을 줄입니다.</p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <th scope="row"><label for="deletePassword">삭제 비밀번호 *</label></th>
+                    <td colspan="3">
+                      <input id="deletePassword" name="deletePassword" type="password" placeholder="사례를 직접 삭제할 때 사용할 비밀번호를 입력해 주세요." data-label="삭제 비밀번호" required />
+                      <p class="input-hint">공유 후 삭제가 필요할 때 이 비밀번호를 입력하면 직접 삭제할 수 있습니다. 비밀번호는 저장 전 암호화됩니다.</p>
                     </td>
                   </tr>
                 </tbody>
               </table>
 
               <div class="form-actions">
-                <button class="primary-action" type="submit">제출하기</button>
+                <button class="primary-action" type="submit">공유하기</button>
                 <button class="secondary-action" type="button" id="resetForm">입력 초기화</button>
-                <button class="ghost-action" type="button" id="loadSample">샘플 스토리 불러오기</button>
+                <button class="ghost-action" type="button" id="loadSample">샘플 사례 불러오기</button>
               </div>
             </form>
 
             <aside class="tip-card">
               <span class="card-kicker">Writing guide</span>
               <h3>카드뉴스가 좋아지는 입력 팁</h3>
-              <p>좋은 성과 스토리는 성과 수치와 감정의 온도가 함께 있어요. 숫자는 신뢰를 만들고, 에피소드는 기억을 만듭니다.</p>
+              <p>좋은 성과 사례는 정량적 성과와 현장의 온도가 함께 있어요. 숫자는 신뢰를 만들고, 에피소드는 기억을 만듭니다.</p>
               <ul>
                 <li>성과 수치는 가능한 전후 비교로 적기</li>
                 <li>협업한 조직이나 구성원 역할 드러내기</li>
-                <li>조직문화 메시지는 구호보다 실제 행동으로 쓰기</li>
+                <li>강조하고 싶은 메시지는 짧고 선명한 문장으로 쓰기</li>
               </ul>
             </aside>
           </div>
@@ -220,16 +185,19 @@
         <section class="view" id="archive" aria-labelledby="archive-title">
           <div class="section-heading compact">
             <p class="eyebrow">Archive</p>
-            <h2 id="archive-title">취합된 스토리 목록</h2>
-            <p>제출 내용을 확인하고 카드뉴스 제작 대상으로 선택할 수 있습니다.</p>
+            <h2 id="archive-title">공유된 사례 목록</h2>
+            <p>공유된 내용을 확인하고 카드뉴스 시안을 제작해 볼 수 있습니다.</p>
           </div>
 
           <div class="toolbar">
+            <label class="search-box month-filter">
+              <span>연월 선택</span>
+              <select id="monthFilter"></select>
+            </label>
             <label class="search-box">
               <span>검색</span>
-              <input id="storySearch" type="search" placeholder="본부/실, 제목, 키워드 검색" />
+              <input id="storySearch" type="search" placeholder="소속, 제목, 키워드 검색" />
             </label>
-            <button class="secondary-action" type="button" id="clearStories">목록 비우기</button>
           </div>
 
           <div class="story-grid" id="storyList"></div>
@@ -237,15 +205,15 @@
 
         <section class="view" id="studio" aria-labelledby="studio-title">
           <div class="section-heading compact">
-            <p class="eyebrow">AI image studio</p>
-            <h2 id="studio-title">AI 카드뉴스 제작</h2>
-            <p>취합된 스토리를 선택하고 템플릿을 고르면, 이미지 생성 프롬프트와 1장 카드뉴스 미리보기를 만듭니다.</p>
+            <p class="eyebrow">Image studio</p>
+            <h2 id="studio-title">카드뉴스 시안 제작</h2>
+            <p>공유된 사례를 선택하고 템플릿을 고르면, 이미지 생성 프롬프트와 1장 카드뉴스 미리보기를 만듭니다.</p>
           </div>
 
           <div class="studio-layout">
             <aside class="studio-controls">
               <label>
-                제작할 스토리
+                제작할 사례
                 <select id="storySelect"></select>
               </label>
 
@@ -265,14 +233,14 @@
               </label>
 
               <label>
-                AI 이미지 생성 프롬프트
+                이미지 생성 프롬프트
                 <textarea id="aiPrompt" rows="8" readonly></textarea>
               </label>
 
               <div class="button-stack">
-                <button class="primary-action" type="button" id="generateCard">AI 카드뉴스 생성</button>
+                <button class="primary-action" type="button" id="generateCard">카드뉴스 시안 생성</button>
                 <button class="secondary-action" type="button" id="copyPrompt">프롬프트 복사</button>
-                <button class="secondary-action" type="button" id="saveCard">최종 확정 및 저장</button>
+                <button class="secondary-action" type="button" id="saveCard">시안 공유</button>
                 <button class="ghost-action" type="button" id="downloadCard">PNG 다운로드</button>
               </div>
             </aside>
@@ -281,7 +249,7 @@
               <div class="canvas-frame">
                 <canvas id="cardCanvas" width="1080" height="1080"></canvas>
               </div>
-              <p id="studioStatus" class="status-text">스토리를 선택하고 생성 버튼을 눌러주세요.</p>
+              <p id="studioStatus" class="status-text">사례를 선택하고 생성 버튼을 눌러주세요.</p>
             </section>
           </div>
         </section>
@@ -289,8 +257,8 @@
         <section class="view" id="gallery" aria-labelledby="gallery-title">
           <div class="section-heading compact">
             <p class="eyebrow">Final assets</p>
-            <h2 id="gallery-title">저장된 카드뉴스</h2>
-            <p>확정한 카드뉴스를 다시 확인하고 다운로드할 수 있습니다.</p>
+            <h2 id="gallery-title">공유된 카드뉴스 시안</h2>
+            <p>공유된 카드뉴스 시안을 다시 확인하고 다운로드할 수 있습니다.</p>
           </div>
 
           <div class="card-gallery" id="cardGallery"></div>
@@ -301,11 +269,18 @@
     <template id="emptyStateTemplate">
       <article class="empty-state">
         <span>아직 데이터가 없습니다.</span>
-        <p>스토리 제출 페이지에서 첫 이야기를 등록해 주세요.</p>
+        <p>사례 공유 페이지에서 첫 이야기를 등록해 주세요.</p>
       </article>
     </template>
 
     <script src="./config.js"></script>
-    <script src="./app.js"></script>
+    <script src="./app.boot.js"></script>
+    <script src="./app.flow.js"></script>
+    <script src="./app.studio.js"></script>
+    <script src="./app.render.js"></script>
+    <script src="./app.storage.js"></script>
+    <script src="./app.cards.js"></script>
+    <script src="./app.draw.js"></script>
+    <script src="./app.utils.js"></script>
   </body>
 </html>

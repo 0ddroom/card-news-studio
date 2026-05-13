@@ -1,0 +1,182 @@
+function renderAll() {
+  renderDashboard();
+  renderMonthFilter();
+  renderStoryList();
+  populateStorySelect();
+  updatePrompt();
+  renderGallery();
+}
+
+function renderDashboard() {
+  elements.storyCount.textContent = stories.length;
+  elements.cardCount.textContent = cards.length;
+  elements.divisionCount.textContent = new Set(stories.map((story) => story.division)).size;
+}
+
+function renderMonthFilter() {
+  const currentValue = elements.monthFilter.value;
+  const months = [...new Set(stories.map((story) => story.reportMonth).filter(Boolean))].sort().reverse();
+  elements.monthFilter.innerHTML = [
+    `<option value="">전체 연월</option>`,
+    ...months.map((month) => `<option value="${escapeHtml(month)}">${escapeHtml(month)}</option>`),
+  ].join("");
+
+  if (months.includes(currentValue)) {
+    elements.monthFilter.value = currentValue;
+  }
+}
+
+function renderStoryList() {
+  const keyword = elements.storySearch.value.trim().toLowerCase();
+  const selectedMonth = elements.monthFilter.value;
+  const filtered = stories.filter((story) => {
+    const haystack = [story.division, story.owner, story.email, story.title, story.summary, story.impactMetric, story.evidence, story.quote]
+      .join(" ")
+      .toLowerCase();
+    const matchesKeyword = haystack.includes(keyword);
+    const matchesMonth = !selectedMonth || story.reportMonth === selectedMonth;
+    return matchesKeyword && matchesMonth;
+  });
+
+  if (!filtered.length) {
+    elements.storyList.innerHTML = getEmptyState("공유된 사례가 없습니다.", "사례 공유 페이지에서 첫 이야기를 등록해 주세요.");
+    return;
+  }
+
+  elements.storyList.innerHTML = filtered
+    .map(
+      (story) => `
+        <article class="story-card">
+          <div class="story-thumb">${story.imageData ? `<img src="${story.imageData}" alt="${escapeHtml(story.title)} 참고 이미지" />` : ""}</div>
+          <div class="story-body">
+            <div class="story-meta">
+              <span class="pill">${story.reportMonth}</span>
+              <span class="pill">${story.division}</span>
+            </div>
+            <h3>${escapeHtml(story.title)}</h3>
+            <p>${escapeHtml(story.summary)}</p>
+            <p><strong>정량적 성과:</strong> ${escapeHtml(story.impactMetric)}</p>
+            <div class="story-actions">
+              <button class="tiny-button" type="button" data-start-card="${story.id}">카드뉴스 시안 제작</button>
+              <button class="tiny-button alt" type="button" data-delete-story="${story.id}">삭제</button>
+            </div>
+          </div>
+        </article>
+      `,
+    )
+    .join("");
+
+  $$("[data-start-card]").forEach((button) => {
+    button.addEventListener("click", () => {
+      showView("studio");
+      elements.storySelect.value = button.dataset.startCard;
+      updatePrompt();
+      drawPlaceholderCard();
+    });
+  });
+
+  $$("[data-delete-story]").forEach((button) => {
+    button.addEventListener("click", () => handleStoryDelete(button.dataset.deleteStory));
+  });
+
+}
+
+async function handleStoryDelete(storyId) {
+  const story = stories.find((item) => item.id === storyId);
+  if (!story) return;
+
+  const password = prompt("사례 공유 시 입력한 삭제 비밀번호를 입력해 주세요.");
+  if (password === null) return;
+  if (!password.trim()) {
+    alert("삭제 비밀번호를 입력해 주세요.");
+    return;
+  }
+
+  try {
+    let canDelete = false;
+
+    if (sharedStorageAvailable) {
+      canDelete = await deleteRemoteStory(story.id, password.trim());
+      if (!canDelete) {
+        alert("비밀번호가 일치하지 않거나, 비밀번호 기능이 적용되기 전 공유된 사례입니다.");
+        return;
+      }
+    } else {
+      if (!story.passwordHash) {
+        alert("비밀번호 기능이 적용되기 전 공유된 사례는 화면에서 삭제할 수 없습니다.");
+        return;
+      }
+
+      canDelete = story.passwordHash === (await hashText(password.trim()));
+      if (!canDelete) {
+        alert("비밀번호가 일치하지 않습니다.");
+        return;
+      }
+    }
+
+    stories = stories.filter((item) => item.id !== story.id);
+    saveToStorage(STORAGE_KEYS.stories, stories);
+    renderAll();
+    drawPlaceholderCard();
+    alert("사례가 삭제되었습니다.");
+  } catch (error) {
+    console.error("사례 삭제 실패", error);
+    alert("사례를 삭제하지 못했습니다. Supabase 마이그레이션 SQL이 적용되었는지 확인해 주세요.");
+  }
+}
+
+function renderGallery() {
+  if (!cards.length) {
+    elements.cardGallery.innerHTML = getEmptyState("공유된 카드뉴스 시안이 없습니다.", "카드뉴스 시안 제작 페이지에서 시안 공유를 눌러주세요.");
+    return;
+  }
+
+  elements.cardGallery.innerHTML = cards
+    .map(
+      (card) => `
+        <article class="gallery-item">
+          <img src="${card.imageData}" alt="${escapeHtml(card.title)} 카드뉴스" />
+          <div class="gallery-body">
+            <div class="gallery-meta">
+              <span class="pill">${escapeHtml(card.division)}</span>
+              <span class="pill">${getTemplateName(card.templateId)}</span>
+            </div>
+            <h3>${escapeHtml(card.title)}</h3>
+            <p>${formatDate(card.createdAt)} 저장</p>
+            <div class="gallery-actions">
+              <button class="tiny-button" type="button" data-download-card="${card.id}">PNG 다운로드</button>
+              <button class="tiny-button alt" type="button" data-delete-card="${card.id}">삭제</button>
+            </div>
+          </div>
+        </article>
+      `,
+    )
+    .join("");
+
+  $$("[data-download-card]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const card = cards.find((item) => item.id === button.dataset.downloadCard);
+      if (!card) return;
+      await downloadImageSource(card.imageData, `${sanitizeFileName(card.division)}_${sanitizeFileName(card.title)}.png`);
+    });
+  });
+
+  $$("[data-delete-card]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const card = cards.find((item) => item.id === button.dataset.deleteCard);
+      if (!card) return;
+      if (sharedStorageAvailable) {
+        alert("공용 저장소 모드에서는 웹 화면 삭제를 막아두었습니다. Supabase 관리자 화면에서 삭제해 주세요.");
+        return;
+      }
+
+      const confirmed = confirm(`‘${card.title}’ 카드뉴스 시안을 저장함에서 삭제할까요?`);
+      if (!confirmed) return;
+
+      cards = cards.filter((item) => item.id !== card.id);
+      saveToStorage(STORAGE_KEYS.cards, cards);
+      renderAll();
+    });
+  });
+}
+

@@ -9,34 +9,46 @@ let sharedStorageAvailable = sharedStorageEnabled;
 
 const templates = [
   {
-    id: "spotlight",
-    name: "성과 스포트라이트",
-    description: "숫자 성과와 핵심 메시지를 강하게 보여주는 템플릿",
+    id: "report",
+    name: "성공로그 리포트",
+    description: "사례의 전체 맥락을 균형 있게 정리하는 기본형",
     palette: ["#173d2a", "#f6be45", "#fff7e4", "#8daf63"],
   },
   {
-    id: "field",
-    name: "현장 스토리",
-    description: "활동 사진과 구성원 이야기를 따뜻하게 담는 템플릿",
+    id: "magazine",
+    name: "현장 매거진",
+    description: "이미지와 이야기를 크게 보여주는 감성형",
     palette: ["#f7ead8", "#ef735c", "#214c36", "#f6be45"],
   },
   {
-    id: "culture",
-    name: "조직문화 웨이브",
-    description: "협업, 성장, 도전 같은 문화 메시지를 선명하게 표현",
+    id: "metric",
+    name: "성과 숫자 스포트라이트",
+    description: "정량적 성과가 있을 때 숫자를 크게 강조하는 성과형",
+    palette: ["#173d2a", "#f6be45", "#fff7e4", "#ef735c"],
+  },
+  {
+    id: "timeline",
+    name: "진행 여정 타임라인",
+    description: "활동 기간, 참여, 근거를 흐름으로 보여주는 과정형",
     palette: ["#253b70", "#80d0b1", "#fff7e4", "#f6be45"],
   },
   {
     id: "quote",
-    name: "인터뷰 임팩트",
-    description: "담당자 한마디와 사람의 목소리를 전면에 배치",
+    name: "한마디 포커스",
+    description: "고객/직원의 한마디를 사례 맥락과 함께 보여주는 인용형",
     palette: ["#151515", "#fff3d3", "#ef735c", "#f6be45"],
   },
   {
-    id: "beforeAfter",
-    name: "Before & After",
-    description: "문제와 변화를 한눈에 비교해 개선 성과를 강조",
+    id: "compare",
+    name: "변화 비교 보드",
+    description: "문제와 시도, 결과를 좌우 비교로 정리하는 개선형",
     palette: ["#e8f2f0", "#214c36", "#3f70d6", "#f6be45"],
+  },
+  {
+    id: "checklist",
+    name: "핵심 포인트 체크리스트",
+    description: "공유 사례의 핵심 요소를 읽기 쉬운 체크리스트로 정리",
+    palette: ["#253b70", "#80d0b1", "#fff7e4", "#f6be45"],
   },
 ];
 
@@ -47,8 +59,32 @@ const toneCopy = {
   playful: "밝고 활기 있는 톤",
 };
 
-let stories = loadFromStorage(STORAGE_KEYS.stories, []);
-let cards = loadFromStorage(STORAGE_KEYS.cards, []);
+const CANVAS_TITLE_FONT = "Hahmlet, Noto Serif KR, Nanum Myeongjo, serif";
+const CANVAS_BODY_FONT = "Gowun Dodum, Noto Sans KR, Malgun Gothic, sans-serif";
+
+const CURRENT_DIVISIONS = ["경영기획실", "경영관리실", "eBiz본부", "점포사업본부", "IT지원실", "정보보안실"];
+const LEGACY_DIVISION_MAP = {
+  경영지원실: "경영관리실",
+  "인사/조직문화실": "경영기획실",
+  영업본부: "점포사업본부",
+  마케팅본부: "eBiz본부",
+  제품본부: "eBiz본부",
+  개발본부: "IT지원실",
+  고객경험실: "eBiz본부",
+  재무실: "경영관리실",
+  전략기획실: "경영기획실",
+};
+const TEAM_BY_DIVISION = {
+  경영기획실: "인사지원팀",
+  경영관리실: "경영관리팀",
+  eBiz본부: "마케팅지원단",
+  점포사업본부: "점포사업지원팀",
+  IT지원실: "IT지원팀",
+  정보보안실: "정보보안팀",
+};
+
+let stories = normalizeStories(loadFromStorage(STORAGE_KEYS.stories, []));
+let cards = normalizeCards(loadFromStorage(STORAGE_KEYS.cards, []));
 let selectedTemplateId = templates[0].id;
 let currentCardDataUrl = "";
 
@@ -61,11 +97,9 @@ const elements = {
   storyCount: $("#storyCount"),
   cardCount: $("#cardCount"),
   divisionCount: $("#divisionCount"),
-  storageMode: $("#storageMode"),
-  storageHint: $("#storageHint"),
   storyList: $("#storyList"),
   storySearch: $("#storySearch"),
-  clearStories: $("#clearStories"),
+  monthFilter: $("#monthFilter"),
   resetForm: $("#resetForm"),
   loadSample: $("#loadSample"),
   storySelect: $("#storySelect"),
@@ -82,6 +116,8 @@ const elements = {
 };
 
 document.addEventListener("DOMContentLoaded", async () => {
+  saveToStorage(STORAGE_KEYS.stories, stories);
+  saveToStorage(STORAGE_KEYS.cards, cards);
   setDefaultMonth();
   bindNavigation();
   bindForm();
@@ -114,15 +150,103 @@ function saveToStorage(key, value) {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
+function normalizeStories(items) {
+  return Array.isArray(items) ? items.map(normalizeStory) : [];
+}
+
+function normalizeCards(items) {
+  return Array.isArray(items)
+    ? items.map((card) => ({
+        ...card,
+        division: normalizeDivision(card.division),
+      }))
+    : [];
+}
+
+function normalizeStory(story) {
+  const normalized = {
+    ...story,
+    reportMonth: story.reportMonth || story.report_month || "",
+    division: normalizeDivision(story.division),
+    owner: story.owner || "",
+    email: story.email || "",
+    impactMetric: story.impactMetric || story.impact_metric || "정량적 성과는 운영 후 집계 예정",
+    evidence: story.evidence || "",
+    cultureValue: story.cultureValue || story.culture_value || "",
+    quote: story.quote || "관련된 한마디는 추후 공유 예정입니다.",
+    desiredMessage: story.desiredMessage || story.desired_message || story.title || "",
+    passwordHash: story.passwordHash || story.password_hash || "",
+  };
+
+  if (looksLikeEmail(normalized.email)) {
+    const legacyPersonName = normalized.owner;
+    normalized.email = legacyPersonName && !looksLikeEmail(legacyPersonName) ? legacyPersonName : "";
+    normalized.owner = inferTeamName(story.division, normalized.division, story.title, story.summary);
+  }
+
+  if (!normalized.owner) {
+    normalized.owner = inferTeamName(story.division, normalized.division, story.title, story.summary);
+  }
+
+  if (!normalized.email) {
+    normalized.email = "이름 미입력";
+  }
+
+  normalized.cultureValue = normalized.evidence || normalized.cultureValue || normalized.summary || "";
+  return normalized;
+}
+
+function normalizeDivision(division) {
+  if (CURRENT_DIVISIONS.includes(division)) return division;
+  return LEGACY_DIVISION_MAP[division] || "경영기획실";
+}
+
+function inferTeamName(originalDivision, normalizedDivision, title = "", summary = "") {
+  const text = [originalDivision, title, summary].filter(Boolean).join(" ");
+
+  if (text.includes("고객")) return "고객경험팀";
+  if (text.includes("마케팅")) return "마케팅지원단";
+  if (text.includes("점포") || text.includes("영업")) return "점포사업지원팀";
+  if (text.includes("개발") || text.includes("IT") || text.includes("시스템")) return "IT지원팀";
+  if (text.includes("보안")) return "정보보안팀";
+  if (text.includes("재무") || text.includes("관리")) return "경영관리팀";
+  if (text.includes("인사") || text.includes("조직문화") || text.includes("성공로그")) return "인사지원팀";
+
+  return TEAM_BY_DIVISION[normalizedDivision] || "인사지원팀";
+}
+
+function looksLikeEmail(value = "") {
+  return /\S+@\S+\.\S+/.test(value);
+}
+
+async function hashText(value) {
+  if (!crypto.subtle) {
+    return fallbackHash(value);
+  }
+
+  const encoded = new TextEncoder().encode(value);
+  const digest = await crypto.subtle.digest("SHA-256", encoded);
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+function fallbackHash(value) {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return `fallback-${(hash >>> 0).toString(16)}`;
+}
+
 async function hydrateSharedStorage() {
   if (!sharedStorageEnabled) return;
 
-  elements.storageHint.textContent = "Supabase 연결 확인 중";
-
   try {
     const [remoteStories, remoteCards] = await Promise.all([fetchRemoteStories(), fetchRemoteCards()]);
-    stories = remoteStories;
-    cards = remoteCards;
+    stories = normalizeStories(remoteStories);
+    cards = normalizeCards(remoteCards);
     saveToStorage(STORAGE_KEYS.stories, stories);
     saveToStorage(STORAGE_KEYS.cards, cards);
     renderAll();
@@ -130,7 +254,6 @@ async function hydrateSharedStorage() {
   } catch (error) {
     console.warn("공용 저장소 연결에 실패했습니다. 로컬 모드로 계속 진행합니다.", error);
     sharedStorageAvailable = false;
-    elements.storageHint.textContent = "공용 저장소 연결 실패, 로컬 캐시 사용";
   }
 }
 
@@ -198,6 +321,7 @@ function bindForm() {
       return;
     }
 
+    const passwordHash = await hashText(formData.get("deletePassword").trim());
     const story = {
       id: storyId,
       createdAt: new Date().toISOString(),
@@ -209,11 +333,12 @@ function bindForm() {
       period: formData.get("period").trim(),
       participants: formData.get("participants").trim(),
       summary: formData.get("summary").trim(),
-      impactMetric: formData.get("impactMetric").trim(),
+      impactMetric: formData.get("impactMetric").trim() || "정량적 성과는 운영 후 집계 예정",
       evidence: formData.get("evidence").trim(),
-      cultureValue: formData.get("cultureValue").trim(),
-      quote: formData.get("quote").trim(),
+      cultureValue: formData.get("evidence").trim(),
+      quote: formData.get("quote").trim() || "관련된 한마디는 추후 공유 예정입니다.",
       desiredMessage: formData.get("desiredMessage").trim(),
+      passwordHash,
       imageName: file.name,
       imageData,
     };
@@ -223,8 +348,8 @@ function bindForm() {
       stories.unshift(story);
       saveToStorage(STORAGE_KEYS.stories, stories);
     } catch (error) {
-      console.error("스토리 저장 실패", error);
-      alert("스토리를 저장하지 못했습니다. 공용 저장소 설정을 확인해 주세요.");
+      console.error("사례 저장 실패", error);
+      alert("사례를 저장하지 못했습니다. 공용 저장소 설정을 확인해 주세요.");
       return;
     }
 
@@ -232,7 +357,7 @@ function bindForm() {
     setDefaultMonth();
     clearValidationAlert();
     renderAll();
-    alert("스토리가 제출되었습니다. 취합 목록에서 확인할 수 있습니다.");
+    alert("사례가 공유되었습니다. 공유된 사례 보기에서 확인할 수 있습니다.");
     showView("archive");
   });
 
@@ -245,22 +370,7 @@ function bindForm() {
   elements.loadSample.addEventListener("click", fillSampleStory);
 
   elements.storySearch.addEventListener("input", renderStoryList);
-  elements.clearStories.addEventListener("click", () => {
-    if (!stories.length) return;
-    if (sharedStorageAvailable) {
-      alert("공용 저장소 모드에서는 전체 삭제를 막아두었습니다. 삭제가 필요하면 Supabase 관리자 화면에서 처리해 주세요.");
-      return;
-    }
-
-    const confirmed = confirm("취합된 스토리 목록을 모두 비울까요? 저장된 카드뉴스는 유지됩니다.");
-    if (!confirmed) return;
-
-    stories = [];
-    saveToStorage(STORAGE_KEYS.stories, stories);
-    currentCardDataUrl = "";
-    renderAll();
-    drawPlaceholderCard();
-  });
+  elements.monthFilter.addEventListener("change", renderStoryList);
 }
 
 function validateStoryForm() {
@@ -289,7 +399,7 @@ function validateStoryForm() {
 
 function showValidationAlert(missingLabels) {
   const message = missingLabels.map((label) => `‘${label}’ 칸을 입력하지 않으셨습니다.`).join("<br />");
-  elements.validationAlert.innerHTML = `<strong>제출 전에 확인해 주세요.</strong>${message}`;
+  elements.validationAlert.innerHTML = `<strong>공유 전에 확인해 주세요.</strong>${message}`;
   elements.validationAlert.hidden = false;
   alert(`${missingLabels[0]} 칸을 입력하지 않으셨습니다.`);
 }
@@ -339,21 +449,20 @@ function loadImage(src) {
 
 function fillSampleStory() {
   $("#reportMonth").value = "2026-05";
-  $("#division").value = "고객경험실";
-  $("#owner").value = "김하나";
-  $("#email").value = "hana.kim@company.com";
-  $("#title").value = "고객 문의 응답 시간을 절반으로 줄인 CX 개선 스프린트";
-  $("#period").value = "2026.05.01~05.10";
-  $("#participants").value = "고객경험실 12명, 제품본부 4명 협업";
+  $("#division").value = "경영기획실";
+  $("#owner").value = "인사지원팀";
+  $("#email").value = "김교보";
+  $("#title").value = "전사 성과 및 활동 공유 프로그램 <성공로그> 운영 시작";
+  $("#period").value = "2026.05.01~";
+  $("#participants").value = "인사지원팀 2명, 각 본부/실 담당자 협업";
   $("#summary").value =
-    "반복 문의가 많은 5개 유형을 재분류하고, 답변 템플릿과 제품 FAQ를 함께 개선했습니다. 구성원들이 매일 15분씩 고객 목소리를 함께 읽으며 병목을 줄였습니다.";
-  $("#impactMetric").value = "평균 1차 응답 시간 42% 단축, 고객 만족도 4.8점 달성";
+    "각 소속에서 만들어낸 성과와 의미 있는 시도를 한곳에 모아 공유하기 위해 <성공로그> 운영을 시작했습니다. 단순한 실적 취합을 넘어, 고객 가치 혁신을 만든 과정과 구성원의 노력을 함께 기록하고 카드뉴스로 확산하는 프로그램입니다.";
+  $("#impactMetric").value = "월 1회 정기 공유, 6개 소속 참여 기반 구축";
   $("#evidence").value =
-    "고객 피드백 중 '답변이 빨라졌다'는 언급이 전월 대비 2.1배 증가했고, 신규 FAQ 적용 후 동일 문의 재접수율이 31% 줄었습니다.";
-  $("#cultureValue").value =
-    "고객중심이라는 가치를 선언에 그치지 않고, 매일의 작은 개선 루틴으로 바꾼 사례입니다. 부서 간 협업으로 문제를 더 빠르게 발견하고 해결했습니다.";
-  $("#quote").value = "고객의 불편을 우리 일의 출발점으로 삼았더니 개선 방향이 선명해졌습니다.";
-  $("#desiredMessage").value = "고객의 목소리를 매일 읽자, 응답 속도가 42% 빨라졌습니다.";
+    "그동안 부서별 성과와 활동이 개별적으로 공유되어 전사 관점의 학습과 확산이 어려웠습니다. 성공로그는 담당자가 직접 사례를 공유하고, 카드뉴스로 보기 쉽게 정리해 좋은 시도가 조직 안에서 더 빠르게 발견되도록 돕습니다.";
+  $("#quote").value = "좋은 성과와 시도가 조직 안에서 더 자주 발견되고 연결되었으면 합니다.";
+  $("#desiredMessage").value = "우리의 성공 경험을 기록하고, 더 큰 고객 가치로 연결합니다.";
+  $("#deletePassword").value = "successlog";
   clearValidationAlert();
 }
 
@@ -371,22 +480,22 @@ function bindStudio() {
   elements.generateCard.addEventListener("click", async () => {
     const story = getSelectedStory();
     if (!story) {
-      alert("카드뉴스로 제작할 스토리를 먼저 선택해 주세요.");
+      alert("카드뉴스 시안으로 제작할 사례를 먼저 선택해 주세요.");
       return;
     }
 
-    elements.studioStatus.textContent = "AI 이미지 콘셉트를 정리하고 카드뉴스를 생성하는 중입니다...";
+    elements.studioStatus.textContent = "이미지 콘셉트를 정리하고 카드뉴스 시안을 생성하는 중입니다...";
     elements.generateCard.disabled = true;
 
     try {
       await delay(320);
       await drawCard(story, getSelectedTemplate(), elements.toneSelect.value);
       currentCardDataUrl = elements.cardCanvas.toDataURL("image/png");
-      elements.studioStatus.textContent = "카드뉴스 미리보기가 생성되었습니다. 최종 확정 또는 PNG 다운로드를 진행할 수 있습니다.";
+      elements.studioStatus.textContent = "카드뉴스 시안 미리보기가 생성되었습니다. 시안 공유 또는 PNG 다운로드를 진행할 수 있습니다.";
     } catch (error) {
-      console.error("카드뉴스 생성 실패", error);
+      console.error("카드뉴스 시안 생성 실패", error);
       currentCardDataUrl = "";
-      elements.studioStatus.textContent = "카드뉴스 생성에 실패했습니다. 참고 이미지 접근 권한 또는 공용 저장소 설정을 확인해 주세요.";
+      elements.studioStatus.textContent = "카드뉴스 시안 생성에 실패했습니다. 참고 이미지 접근 권한 또는 공용 저장소 설정을 확인해 주세요.";
     } finally {
       elements.generateCard.disabled = false;
     }
@@ -401,7 +510,7 @@ function bindStudio() {
 
     try {
       await navigator.clipboard.writeText(prompt);
-      elements.studioStatus.textContent = "AI 이미지 생성 프롬프트를 클립보드에 복사했습니다.";
+      elements.studioStatus.textContent = "이미지 생성 프롬프트를 클립보드에 복사했습니다.";
     } catch (error) {
       elements.aiPrompt.select();
       document.execCommand("copy");
@@ -412,7 +521,7 @@ function bindStudio() {
   elements.saveCard.addEventListener("click", async () => {
     const story = getSelectedStory();
     if (!story || !currentCardDataUrl) {
-      alert("먼저 카드뉴스를 생성해 주세요.");
+      alert("먼저 카드뉴스 시안을 생성해 주세요.");
       return;
     }
 
@@ -422,15 +531,14 @@ function bindStudio() {
     try {
       if (sharedStorageAvailable) {
         imageData = await uploadDataUrl(
-          currentCardDataUrl,
+          elements.cardCanvas.toDataURL("image/jpeg", 0.9),
           appConfig.cardBucket,
-          `cards/${cardId}-${sanitizeFileName(story.division)}-${sanitizeFileName(story.title)}.png`,
+          `cards/${cardId}-${sanitizeFileName(story.division)}-${sanitizeFileName(story.title)}.jpg`,
         );
       }
     } catch (error) {
-      console.error("카드뉴스 이미지 업로드 실패", error);
-      alert("카드뉴스 이미지를 공용 저장소에 업로드하지 못했습니다.");
-      return;
+      console.warn("카드뉴스 시안 이미지 업로드 실패, 데이터 URL 저장으로 대체합니다.", error);
+      imageData = elements.cardCanvas.toDataURL("image/jpeg", 0.82);
     }
 
     const card = {
@@ -450,18 +558,18 @@ function bindStudio() {
       cards.unshift(card);
       saveToStorage(STORAGE_KEYS.cards, cards);
       renderAll();
-      elements.studioStatus.textContent = "최종 카드뉴스를 저장함에 보관했습니다.";
+      elements.studioStatus.textContent = "카드뉴스 시안을 공유했습니다. 공유된 시안 보기에서 확인할 수 있습니다.";
       showView("gallery");
     } catch (error) {
-      console.error("카드뉴스 저장 실패", error);
-      alert("카드뉴스 저장에 실패했습니다. 공용 저장소 설정 또는 브라우저 저장 공간을 확인해 주세요.");
+      console.error("카드뉴스 시안 저장 실패", error);
+      alert("카드뉴스 시안 저장에 실패했습니다. 공용 저장소 설정 또는 브라우저 저장 공간을 확인해 주세요.");
     }
   });
 
   elements.downloadCard.addEventListener("click", () => {
     const story = getSelectedStory();
     if (!story || !currentCardDataUrl) {
-      alert("먼저 카드뉴스를 생성해 주세요.");
+      alert("먼저 카드뉴스 시안을 생성해 주세요.");
       return;
     }
 
@@ -496,7 +604,7 @@ function renderTemplateOptions() {
 
 function populateStorySelect() {
   if (!stories.length) {
-    elements.storySelect.innerHTML = `<option value="">제출된 스토리가 없습니다</option>`;
+    elements.storySelect.innerHTML = `<option value="">공유된 사례가 없습니다</option>`;
     elements.storySelect.disabled = true;
     return;
   }
@@ -518,22 +626,24 @@ function updatePrompt() {
   const tone = toneCopy[elements.toneSelect.value];
 
   if (!story) {
-    elements.aiPrompt.value = "스토리를 먼저 제출하거나 취합 목록에서 제작을 시작해 주세요.";
+    elements.aiPrompt.value = "사례를 먼저 공유하거나 공유된 사례 보기에서 제작을 시작해 주세요.";
     return;
   }
 
   elements.aiPrompt.value = [
-    `1장짜리 사내 카드뉴스 이미지를 제작해 주세요.`,
+    `1장짜리 사내 카드뉴스 시안 이미지를 제작해 주세요.`,
     `템플릿: ${template.name} - ${template.description}`,
     `톤앤매너: ${tone}`,
-    `본부/실: ${story.division}`,
+    `소속: ${story.division}`,
     `성과 제목: ${story.title}`,
+    `활동 기간: ${story.period}`,
+    `참여 인원/대상: ${story.participants}`,
     `핵심 메시지: ${story.desiredMessage}`,
-    `숫자 성과: ${story.impactMetric}`,
+    `정량적 성과: ${story.impactMetric}`,
     `이야기 요약: ${story.summary}`,
-    `조직문화 의미: ${story.cultureValue}`,
-    `담당자 한마디: "${story.quote}"`,
-    `디자인 지시: 1080x1080 정사각형, 한국어 타이포그래피가 잘 보이게, 기업 내부 공유용으로 신뢰감 있게, 이미지와 텍스트의 여백을 충분히 확보.`,
+    `근거/에피소드: ${story.evidence}`,
+    `고객/직원의 한마디: "${story.quote}"`,
+    `디자인 지시: 공유된 사례의 전체 내용을 균형 있게 반영하고, 템플릿에 따라 정보 배치와 디자인만 다르게 구성해 주세요. 1080x1080 정사각형, 한국어 타이포그래피가 잘 보이게, 기업 내부 공유용으로 신뢰감 있게, 이미지와 텍스트의 여백을 충분히 확보.`,
   ].join("\n");
 }
 
@@ -548,6 +658,7 @@ function getSelectedTemplate() {
 
 function renderAll() {
   renderDashboard();
+  renderMonthFilter();
   renderStoryList();
   populateStorySelect();
   updatePrompt();
@@ -558,19 +669,35 @@ function renderDashboard() {
   elements.storyCount.textContent = stories.length;
   elements.cardCount.textContent = cards.length;
   elements.divisionCount.textContent = new Set(stories.map((story) => story.division)).size;
-  elements.storageMode.textContent = sharedStorageAvailable ? "공용" : "로컬";
-  elements.storageHint.textContent = sharedStorageAvailable ? "Supabase 무료 저장소 사용" : "현재 브라우저에 저장";
+}
+
+function renderMonthFilter() {
+  const currentValue = elements.monthFilter.value;
+  const months = [...new Set(stories.map((story) => story.reportMonth).filter(Boolean))].sort().reverse();
+  elements.monthFilter.innerHTML = [
+    `<option value="">전체 연월</option>`,
+    ...months.map((month) => `<option value="${escapeHtml(month)}">${escapeHtml(month)}</option>`),
+  ].join("");
+
+  if (months.includes(currentValue)) {
+    elements.monthFilter.value = currentValue;
+  }
 }
 
 function renderStoryList() {
   const keyword = elements.storySearch.value.trim().toLowerCase();
+  const selectedMonth = elements.monthFilter.value;
   const filtered = stories.filter((story) => {
-    const haystack = [story.division, story.title, story.summary, story.impactMetric, story.cultureValue].join(" ").toLowerCase();
-    return haystack.includes(keyword);
+    const haystack = [story.division, story.owner, story.email, story.title, story.summary, story.impactMetric, story.evidence, story.quote]
+      .join(" ")
+      .toLowerCase();
+    const matchesKeyword = haystack.includes(keyword);
+    const matchesMonth = !selectedMonth || story.reportMonth === selectedMonth;
+    return matchesKeyword && matchesMonth;
   });
 
   if (!filtered.length) {
-    elements.storyList.innerHTML = getEmptyState("취합된 스토리가 없습니다.", "스토리 제출 페이지에서 첫 이야기를 등록해 주세요.");
+    elements.storyList.innerHTML = getEmptyState("공유된 사례가 없습니다.", "사례 공유 페이지에서 첫 이야기를 등록해 주세요.");
     return;
   }
 
@@ -586,9 +713,9 @@ function renderStoryList() {
             </div>
             <h3>${escapeHtml(story.title)}</h3>
             <p>${escapeHtml(story.summary)}</p>
-            <p><strong>성과:</strong> ${escapeHtml(story.impactMetric)}</p>
+            <p><strong>정량적 성과:</strong> ${escapeHtml(story.impactMetric)}</p>
             <div class="story-actions">
-              <button class="tiny-button" type="button" data-start-card="${story.id}">카드뉴스 제작</button>
+              <button class="tiny-button" type="button" data-start-card="${story.id}">카드뉴스 시안 제작</button>
               <button class="tiny-button alt" type="button" data-delete-story="${story.id}">삭제</button>
             </div>
           </div>
@@ -607,28 +734,58 @@ function renderStoryList() {
   });
 
   $$("[data-delete-story]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const story = stories.find((item) => item.id === button.dataset.deleteStory);
-      if (!story) return;
-      if (sharedStorageAvailable) {
-        alert("공용 저장소 모드에서는 웹 화면 삭제를 막아두었습니다. 실수 삭제를 피하기 위해 Supabase 관리자 화면에서 삭제해 주세요.");
+    button.addEventListener("click", () => handleStoryDelete(button.dataset.deleteStory));
+  });
+
+}
+
+async function handleStoryDelete(storyId) {
+  const story = stories.find((item) => item.id === storyId);
+  if (!story) return;
+
+  const password = prompt("사례 공유 시 입력한 삭제 비밀번호를 입력해 주세요.");
+  if (password === null) return;
+  if (!password.trim()) {
+    alert("삭제 비밀번호를 입력해 주세요.");
+    return;
+  }
+
+  try {
+    let canDelete = false;
+
+    if (sharedStorageAvailable) {
+      canDelete = await deleteRemoteStory(story.id, password.trim());
+      if (!canDelete) {
+        alert("비밀번호가 일치하지 않거나, 비밀번호 기능이 적용되기 전 공유된 사례입니다.");
+        return;
+      }
+    } else {
+      if (!story.passwordHash) {
+        alert("비밀번호 기능이 적용되기 전 공유된 사례는 화면에서 삭제할 수 없습니다.");
         return;
       }
 
-      const confirmed = confirm(`‘${story.title}’ 스토리를 삭제할까요?`);
-      if (!confirmed) return;
+      canDelete = story.passwordHash === (await hashText(password.trim()));
+      if (!canDelete) {
+        alert("비밀번호가 일치하지 않습니다.");
+        return;
+      }
+    }
 
-      stories = stories.filter((item) => item.id !== story.id);
-      saveToStorage(STORAGE_KEYS.stories, stories);
-      renderAll();
-      drawPlaceholderCard();
-    });
-  });
+    stories = stories.filter((item) => item.id !== story.id);
+    saveToStorage(STORAGE_KEYS.stories, stories);
+    renderAll();
+    drawPlaceholderCard();
+    alert("사례가 삭제되었습니다.");
+  } catch (error) {
+    console.error("사례 삭제 실패", error);
+    alert("사례를 삭제하지 못했습니다. Supabase 마이그레이션 SQL이 적용되었는지 확인해 주세요.");
+  }
 }
 
 function renderGallery() {
   if (!cards.length) {
-    elements.cardGallery.innerHTML = getEmptyState("저장된 카드뉴스가 없습니다.", "AI 카드뉴스 제작 페이지에서 최종 확정 및 저장을 눌러주세요.");
+    elements.cardGallery.innerHTML = getEmptyState("공유된 카드뉴스 시안이 없습니다.", "카드뉴스 시안 제작 페이지에서 시안 공유를 눌러주세요.");
     return;
   }
 
@@ -671,7 +828,7 @@ function renderGallery() {
         return;
       }
 
-      const confirmed = confirm(`‘${card.title}’ 카드뉴스를 저장함에서 삭제할까요?`);
+      const confirmed = confirm(`‘${card.title}’ 카드뉴스 시안을 저장함에서 삭제할까요?`);
       if (!confirmed) return;
 
       cards = cards.filter((item) => item.id !== card.id);
@@ -682,7 +839,9 @@ function renderGallery() {
 }
 
 async function fetchRemoteStories() {
-  const rows = await supabaseFetch("/rest/v1/stories?select=*&order=created_at.desc");
+  const rows = await supabaseFetch(
+    "/rest/v1/stories?select=id,created_at,report_month,division,owner,email,title,period,participants,summary,impact_metric,evidence,culture_value,quote,desired_message,image_name,image_url&order=created_at.desc",
+  );
   return Array.isArray(rows) ? rows.map(mapRemoteStory) : [];
 }
 
@@ -709,6 +868,18 @@ async function persistCard(card) {
     headers: { Prefer: "return=minimal" },
     body: JSON.stringify(mapCardToRemote(card)),
   });
+}
+
+async function deleteRemoteStory(storyId, password) {
+  const result = await supabaseFetch("/rest/v1/rpc/delete_story_with_password", {
+    method: "POST",
+    body: JSON.stringify({
+      target_story_id: storyId,
+      plain_password: password,
+    }),
+  });
+
+  return result === true;
 }
 
 async function supabaseFetch(path, options = {}) {
@@ -787,6 +958,7 @@ function mapStoryToRemote(story) {
     culture_value: story.cultureValue,
     quote: story.quote,
     desired_message: story.desiredMessage,
+    password_hash: story.passwordHash,
     image_name: story.imageName,
     image_url: story.imageData,
   };
@@ -809,6 +981,7 @@ function mapRemoteStory(row) {
     cultureValue: row.culture_value,
     quote: row.quote,
     desiredMessage: row.desired_message,
+    passwordHash: row.password_hash || "",
     imageName: row.image_name,
     imageData: row.image_url || "",
   };
@@ -873,14 +1046,14 @@ function drawPlaceholderCard() {
   drawRoundedRect(context, 86, 92, 908, 896, 48, "rgba(255, 247, 228, 0.88)");
 
   context.fillStyle = "#214c36";
-  context.font = "800 46px Malgun Gothic, sans-serif";
-  context.fillText("Card News Studio", 140, 190);
-  context.font = "700 32px Malgun Gothic, sans-serif";
-  wrapText(context, "스토리를 선택하고 AI 카드뉴스 생성 버튼을 눌러주세요.", 140, 290, 780, 46);
+  context.font = `800 46px ${CANVAS_TITLE_FONT}`;
+  context.fillText("성공로그", 140, 190);
+  context.font = `700 32px ${CANVAS_BODY_FONT}`;
+  wrapText(context, "사례를 선택하고 카드뉴스 시안 생성 버튼을 눌러주세요.", 140, 290, 780, 46);
 
-  context.font = "700 26px Malgun Gothic, sans-serif";
+  context.font = `700 26px ${CANVAS_BODY_FONT}`;
   context.fillStyle = "#66736c";
-  wrapText(context, "본부/실의 성과와 활동이 이곳에서 1장짜리 카드뉴스로 정리됩니다.", 140, 410, 720, 40);
+  wrapText(context, "공유된 성과와 활동이 이곳에서 1장짜리 카드뉴스 시안으로 정리됩니다.", 140, 410, 720, 40);
 }
 
 async function drawCard(story, template, tone) {
@@ -890,117 +1063,223 @@ async function drawCard(story, template, tone) {
 
   context.clearRect(0, 0, canvas.width, canvas.height);
 
-  if (template.id === "spotlight") drawSpotlight(context, story, template, image, tone);
-  if (template.id === "field") drawFieldStory(context, story, template, image, tone);
-  if (template.id === "culture") drawCultureWave(context, story, template, image, tone);
-  if (template.id === "quote") drawQuoteImpact(context, story, template, image, tone);
-  if (template.id === "beforeAfter") drawBeforeAfter(context, story, template, image, tone);
+  if (template.id === "report") drawReportDraft(context, story, template, image, tone);
+  if (template.id === "magazine") drawMagazineDraft(context, story, template, image, tone);
+  if (template.id === "metric") drawMetricDraft(context, story, template, image, tone);
+  if (template.id === "timeline") drawTimelineDraft(context, story, template, image, tone);
+  if (template.id === "quote") drawQuoteDraft(context, story, template, image, tone);
+  if (template.id === "compare") drawCompareDraft(context, story, template, image, tone);
+  if (template.id === "checklist") drawChecklistDraft(context, story, template, image, tone);
 }
 
-function drawSpotlight(context, story, template, image) {
+function getStorySections(story) {
+  return [
+    { label: "활동 기간", value: story.period },
+    { label: "참여", value: story.participants },
+    { label: "핵심 이야기", value: story.summary },
+    { label: "정량적 성과", value: story.impactMetric },
+    { label: "근거/에피소드", value: story.evidence },
+    { label: "고객/직원의 한마디", value: story.quote },
+  ].filter((section) => section.value);
+}
+
+function drawReportDraft(context, story, template, image) {
   const [dark, gold, cream, moss] = template.palette;
   drawGradient(context, dark, "#2d684a");
-  drawCircle(context, 870, 170, 260, "rgba(246, 190, 69, 0.7)");
-  drawCircle(context, 880, 190, 180, "rgba(255, 247, 228, 0.34)");
-  drawImagePanel(context, image, 648, 210, 330, 470, 44);
+  drawCircle(context, 890, 120, 230, "rgba(246, 190, 69, 0.62)");
+  drawCircle(context, 160, 930, 250, "rgba(141, 175, 99, 0.24)");
+  drawImagePanel(context, image, 694, 110, 300, 300, 44);
 
-  drawPillText(context, `${story.reportMonth} · ${story.division}`, 80, 80, cream, "rgba(255,255,255,0.16)");
-  drawHeadline(context, story.desiredMessage, 80, 190, 560, cream, 62);
-  drawMetricBlock(context, story.impactMetric, 80, 600, gold, dark);
+  drawDivisionHeader(context, story, 74, 72, cream, "rgba(255,255,255,0.16)", gold);
+  drawPillText(context, story.reportMonth, 74, 142, dark, gold);
+  drawHeadline(context, story.title, 74, 180, 590, cream, 52);
 
-  context.fillStyle = cream;
-  context.globalAlpha = 0.88;
-  context.font = "700 28px Malgun Gothic, sans-serif";
-  wrapText(context, story.cultureValue, 80, 790, 860, 42, 4);
-  context.globalAlpha = 1;
-  drawFooter(context, story.owner, moss, cream);
+  context.fillStyle = gold;
+  context.font = `900 34px ${CANVAS_BODY_FONT}`;
+  wrapText(context, story.desiredMessage, 74, 390, 560, 44, 2);
+
+  drawRoundedRect(context, 74, 492, 932, 408, 34, "rgba(255, 247, 228, 0.92)");
+  drawSectionRows(context, getStorySections(story), 110, 548, 860, {
+    labelColor: dark,
+    textColor: "#37443b",
+    rowGap: 54,
+    maxLines: 2,
+  });
+  drawFooter(context, `${story.division} · ${story.reportMonth}`, moss, cream);
 }
 
-function drawFieldStory(context, story, template, image) {
+function drawMagazineDraft(context, story, template, image) {
   const [paper, coral, forest, gold] = template.palette;
   drawGradient(context, "#fff7e4", paper);
-  drawCircle(context, 135, 135, 120, "rgba(239, 115, 92, 0.28)");
-  drawCircle(context, 945, 930, 190, "rgba(246, 190, 69, 0.34)");
-  drawPolaroid(context, image, 90, 90, 900, 520, coral);
+  drawCircle(context, 130, 120, 110, "rgba(239, 115, 92, 0.22)");
+  drawCircle(context, 940, 940, 210, "rgba(246, 190, 69, 0.34)");
+  drawPolaroid(context, image, 70, 70, 465, 500, coral);
 
-  drawPillText(context, `${story.division} field note`, 96, 660, "#fff7e4", forest);
-  drawHeadline(context, story.title, 96, 735, 830, forest, 48);
-  context.fillStyle = "#506259";
-  context.font = "700 27px Malgun Gothic, sans-serif";
-  wrapText(context, story.summary, 96, 900, 840, 38, 3);
-  drawFooter(context, story.impactMetric, gold, forest);
+  drawDivisionHeader(context, story, 590, 88, "#fff7e4", forest, gold);
+  drawPillText(context, story.reportMonth, 590, 156, forest, gold);
+  drawHeadline(context, story.title, 590, 180, 410, forest, 42);
+  context.fillStyle = coral;
+  context.font = `900 30px ${CANVAS_BODY_FONT}`;
+  wrapText(context, story.desiredMessage, 590, 390, 390, 38, 3);
+
+  drawRoundedRect(context, 70, 620, 940, 302, 32, "rgba(255, 250, 240, 0.88)");
+  drawSectionRows(context, getStorySections(story), 106, 674, 850, {
+    labelColor: forest,
+    textColor: "#506259",
+    rowGap: 39,
+    maxLines: 1,
+  });
+  drawFooter(context, `${story.division} · ${story.reportMonth}`, gold, forest);
 }
 
-function drawCultureWave(context, story, template, image) {
+function drawMetricDraft(context, story, template, image) {
+  const [dark, gold, cream, coral] = template.palette;
+  drawGradient(context, dark, "#183c2c");
+  drawCircle(context, 220, 240, 220, "rgba(246, 190, 69, 0.30)");
+  drawImagePanel(context, image, 720, 90, 260, 260, 42);
+  drawDivisionHeader(context, story, 74, 72, cream, "rgba(255,255,255,0.16)", gold);
+
+  context.fillStyle = gold;
+  context.font = `900 58px ${CANVAS_TITLE_FONT}`;
+  wrapText(context, story.impactMetric, 74, 245, 610, 68, 3);
+  drawRoundedRect(context, 74, 500, 932, 220, 36, "rgba(255,247,228,0.92)");
+  context.fillStyle = dark;
+  context.font = `900 34px ${CANVAS_BODY_FONT}`;
+  wrapText(context, story.desiredMessage, 112, 570, 840, 44, 2);
+  context.fillStyle = "#465349";
+  context.font = `700 27px ${CANVAS_BODY_FONT}`;
+  wrapText(context, story.summary, 112, 676, 840, 36, 2);
+  drawRoundedRect(context, 74, 760, 932, 138, 30, "rgba(239,115,92,0.20)");
+  context.fillStyle = cream;
+  context.font = `900 24px ${CANVAS_BODY_FONT}`;
+  drawPillText(context, "근거/에피소드", 112, 790, dark, gold);
+  context.fillStyle = cream;
+  context.font = `700 25px ${CANVAS_BODY_FONT}`;
+  wrapText(context, story.evidence, 112, 870, 840, 32, 1);
+  drawFooter(context, `${story.division} · ${story.reportMonth}`, coral, cream);
+}
+
+function drawTimelineDraft(context, story, template, image) {
   const [blue, mint, cream, gold] = template.palette;
   drawGradient(context, blue, "#13264d");
-  drawCircle(context, 270, 280, 240, "rgba(128, 208, 177, 0.38)");
-  drawCircle(context, 800, 760, 330, "rgba(246, 190, 69, 0.22)");
-  drawRoundedRect(context, 72, 78, 936, 924, 54, "rgba(255, 247, 228, 0.92)");
-  drawCircle(context, 830, 214, 110, mint);
-  drawImagePanel(context, image, 690, 260, 245, 245, 122);
+  drawRoundedRect(context, 60, 60, 960, 960, 56, "rgba(255, 247, 228, 0.94)");
+  drawDivisionHeader(context, story, 104, 102, cream, blue, gold);
+  drawHeadline(context, story.title, 104, 210, 780, blue, 46);
+  drawImagePanel(context, image, 774, 92, 170, 170, 34);
 
-  drawPillText(context, "Culture signal", 120, 130, cream, blue);
-  drawHeadline(context, story.desiredMessage, 120, 230, 610, blue, 58);
-  drawMetricBlock(context, story.impactMetric, 120, 590, gold, blue);
+  const steps = [
+    ["기간", story.period],
+    ["참여", story.participants],
+    ["시도", story.summary],
+    ["결과", story.impactMetric],
+    ["근거", story.evidence],
+  ];
 
-  context.fillStyle = "#33443b";
-  context.font = "700 30px Malgun Gothic, sans-serif";
-  wrapText(context, story.cultureValue, 120, 780, 780, 44, 4);
-  drawFooter(context, `${story.division} · ${story.owner}`, mint, blue);
+  context.strokeStyle = mint;
+  context.lineWidth = 8;
+  context.beginPath();
+  context.moveTo(154, 388);
+  context.lineTo(154, 865);
+  context.stroke();
+
+  steps.forEach(([label, value], index) => {
+    const y = 390 + index * 98;
+    drawCircle(context, 154, y - 8, 20, index % 2 ? gold : mint);
+    context.fillStyle = blue;
+    context.font = `900 26px ${CANVAS_BODY_FONT}`;
+    context.fillText(label, 204, y);
+    context.fillStyle = "#38443d";
+    context.font = `700 25px ${CANVAS_BODY_FONT}`;
+    wrapText(context, value, 304, y, 620, 31, 2);
+  });
+
+  drawFooter(context, `${story.division} · ${story.reportMonth}`, mint, blue);
 }
 
-function drawQuoteImpact(context, story, template, image) {
+function drawQuoteDraft(context, story, template, image) {
   const [black, cream, coral, gold] = template.palette;
-
+  drawGradient(context, black, "#303030");
   if (image) {
+    context.globalAlpha = 0.24;
     drawCroppedImage(context, image, 0, 0, 1080, 1080);
-    context.fillStyle = "rgba(0, 0, 0, 0.68)";
+    context.globalAlpha = 1;
+    context.fillStyle = "rgba(0,0,0,0.52)";
     context.fillRect(0, 0, 1080, 1080);
-  } else {
-    drawGradient(context, black, "#303030");
   }
-
-  drawCircle(context, 930, 120, 150, "rgba(246, 190, 69, 0.46)");
-  drawCircle(context, 140, 910, 190, "rgba(239, 115, 92, 0.32)");
-  drawPillText(context, story.division, 80, 80, black, gold);
-
-  context.fillStyle = cream;
-  context.font = "900 76px Georgia, serif";
-  context.fillText("“", 76, 275);
-  context.font = "800 54px Malgun Gothic, sans-serif";
-  wrapText(context, story.quote, 140, 280, 800, 72, 5);
+  drawDivisionHeader(context, story, 78, 78, black, gold, coral);
+  drawHeadline(context, story.title, 78, 185, 880, cream, 46);
 
   context.fillStyle = coral;
-  context.font = "900 34px Malgun Gothic, sans-serif";
-  wrapText(context, story.impactMetric, 140, 720, 760, 44, 2);
+  context.font = `900 92px ${CANVAS_TITLE_FONT}`;
+  context.fillText("“", 76, 390);
+  context.fillStyle = cream;
+  context.font = `800 50px ${CANVAS_TITLE_FONT}`;
+  wrapText(context, story.quote, 142, 395, 820, 62, 4);
 
-  context.fillStyle = "rgba(255, 243, 211, 0.86)";
-  context.font = "700 26px Malgun Gothic, sans-serif";
-  wrapText(context, story.title, 140, 840, 760, 38, 2);
-  drawFooter(context, story.owner, gold, cream);
+  drawRoundedRect(context, 92, 712, 896, 154, 30, "rgba(255,243,211,0.15)");
+  context.fillStyle = gold;
+  context.font = `900 26px ${CANVAS_BODY_FONT}`;
+  context.fillText("사례 요약", 128, 765);
+  context.fillStyle = "rgba(255,243,211,0.88)";
+  context.font = `700 25px ${CANVAS_BODY_FONT}`;
+  wrapText(context, story.summary, 128, 810, 820, 32, 2);
+  drawFooter(context, `${story.division} · ${story.reportMonth}`, gold, cream);
 }
 
-function drawBeforeAfter(context, story, template, image) {
+function drawCompareDraft(context, story, template, image) {
   const [paper, forest, blue, gold] = template.palette;
   drawGradient(context, paper, "#f8f2e6");
-  drawPillText(context, "Before & After", 74, 78, "#fff7e4", forest);
-  drawHeadline(context, story.title, 74, 170, 910, forest, 52);
+  drawDivisionHeader(context, story, 74, 74, "#fff7e4", forest, gold);
+  drawHeadline(context, story.desiredMessage, 74, 176, 820, forest, 48);
+  drawImagePanel(context, image, 802, 72, 190, 190, 34);
 
-  drawRoundedRect(context, 74, 390, 440, 410, 34, "rgba(33, 76, 54, 0.1)");
-  drawRoundedRect(context, 566, 390, 440, 410, 34, "rgba(63, 112, 214, 0.12)");
-  drawPillText(context, "Before", 112, 430, "#fff7e4", "#66736c");
-  drawPillText(context, "After", 604, 430, "#fff7e4", blue);
+  drawRoundedRect(context, 74, 390, 440, 368, 34, "rgba(33, 76, 54, 0.1)");
+  drawRoundedRect(context, 566, 390, 440, 368, 34, "rgba(63, 112, 214, 0.12)");
+  drawPillText(context, "문제와 시도", 112, 430, "#fff7e4", forest);
+  drawPillText(context, "성과와 근거", 604, 430, "#fff7e4", blue);
 
   context.fillStyle = forest;
-  context.font = "800 32px Malgun Gothic, sans-serif";
-  wrapText(context, story.summary, 112, 535, 330, 46, 4);
+  context.font = `800 30px ${CANVAS_BODY_FONT}`;
+  wrapText(context, story.summary, 112, 535, 330, 42, 4);
   context.fillStyle = blue;
-  wrapText(context, story.impactMetric, 604, 535, 330, 48, 4);
+  wrapText(context, `${story.impactMetric} ${story.evidence}`, 604, 535, 330, 42, 4);
 
-  drawImagePanel(context, image, 742, 78, 240, 240, 40);
-  drawMetricBlock(context, story.desiredMessage, 74, 848, gold, forest);
-  drawFooter(context, `${story.division} · ${story.owner}`, gold, forest);
+  drawRoundedRect(context, 74, 802, 932, 118, 28, gold);
+  context.fillStyle = forest;
+  context.font = `900 30px ${CANVAS_BODY_FONT}`;
+  wrapText(context, story.participants, 112, 870, 840, 36, 1);
+  drawFooter(context, `${story.division} · ${story.reportMonth}`, gold, forest);
+}
+
+function drawChecklistDraft(context, story, template, image) {
+  const [blue, mint, cream, gold] = template.palette;
+  drawGradient(context, "#f9f2df", "#eaf0df");
+  drawRoundedRect(context, 60, 60, 960, 960, 56, "rgba(255,250,240,0.92)");
+  drawCircle(context, 900, 100, 150, "rgba(246,190,69,0.34)");
+  drawDivisionHeader(context, story, 104, 100, cream, blue, gold);
+  drawHeadline(context, story.title, 104, 206, 780, blue, 44);
+
+  const items = [
+    ["무엇을 했나요?", story.summary],
+    ["누가 함께했나요?", story.participants],
+    ["어떤 성과가 있었나요?", story.impactMetric],
+    ["어떤 근거가 있나요?", story.evidence],
+    ["강조 문구", story.desiredMessage],
+  ];
+
+  items.forEach(([label, value], index) => {
+    const y = 392 + index * 104;
+    drawRoundedRect(context, 104, y, 872, 82, 24, index % 2 ? "rgba(128,208,177,0.22)" : "rgba(246,190,69,0.22)");
+    drawCircle(context, 146, y + 41, 18, index % 2 ? mint : gold);
+    context.fillStyle = blue;
+    context.font = `900 23px ${CANVAS_BODY_FONT}`;
+    context.fillText(label, 184, y + 35);
+    context.fillStyle = "#34443b";
+    context.font = `700 23px ${CANVAS_BODY_FONT}`;
+    wrapText(context, value, 184, y + 66, 750, 28, 1);
+  });
+
+  drawFooter(context, `${story.division} · ${story.reportMonth}`, mint, blue);
 }
 
 function drawGradient(context, start, end) {
@@ -1013,7 +1292,7 @@ function drawGradient(context, start, end) {
 
 function drawPillText(context, text, x, y, textColor, fillColor) {
   context.save();
-  context.font = "900 24px Malgun Gothic, sans-serif";
+  context.font = `900 24px ${CANVAS_BODY_FONT}`;
   const metrics = context.measureText(text);
   const width = metrics.width + 42;
   drawRoundedRect(context, x, y, width, 48, 24, fillColor);
@@ -1024,21 +1303,47 @@ function drawPillText(context, text, x, y, textColor, fillColor) {
 
 function drawHeadline(context, text, x, y, maxWidth, color, size) {
   context.fillStyle = color;
-  context.font = `900 ${size}px Malgun Gothic, sans-serif`;
+  context.font = `900 ${size}px ${CANVAS_TITLE_FONT}`;
   wrapText(context, text, x, y, maxWidth, size * 1.18, 5);
 }
 
 function drawMetricBlock(context, text, x, y, background, color) {
   drawRoundedRect(context, x, y, 830, 116, 30, background);
   context.fillStyle = color;
-  context.font = "900 34px Malgun Gothic, sans-serif";
+  context.font = `900 34px ${CANVAS_BODY_FONT}`;
   wrapText(context, text, x + 34, y + 46, 760, 42, 2);
+}
+
+function drawSectionRows(context, sections, x, y, width, options) {
+  const { labelColor, textColor, rowGap, maxLines } = options;
+
+  sections.forEach((section, index) => {
+    const rowY = y + index * rowGap;
+    context.fillStyle = labelColor;
+    context.font = `900 22px ${CANVAS_BODY_FONT}`;
+    context.fillText(section.label, x, rowY);
+    context.fillStyle = textColor;
+    context.font = `700 24px ${CANVAS_BODY_FONT}`;
+    wrapText(context, section.value, x + 160, rowY, width - 160, 29, maxLines);
+  });
+}
+
+function drawDivisionHeader(context, story, x, y, textColor, fillColor, accentColor) {
+  context.save();
+  const label = `본부/실 · ${story.division}`;
+  context.font = `900 30px ${CANVAS_BODY_FONT}`;
+  const width = Math.min(430, context.measureText(label).width + 52);
+  drawRoundedRect(context, x, y, width, 58, 26, fillColor);
+  drawRoundedRect(context, x + 14, y + 17, 24, 24, 12, accentColor);
+  context.fillStyle = textColor;
+  context.fillText(label, x + 50, y + 38);
+  context.restore();
 }
 
 function drawFooter(context, text, accent, color) {
   drawRoundedRect(context, 74, 984, 932, 4, 2, accent);
   context.fillStyle = color;
-  context.font = "800 22px Malgun Gothic, sans-serif";
+  context.font = `800 22px ${CANVAS_BODY_FONT}`;
   context.fillText(text, 74, 950);
   context.textAlign = "right";
   context.fillText("Monthly Card News", 1006, 950);
@@ -1073,7 +1378,7 @@ function drawPolaroid(context, image, x, y, width, height, accent) {
 
   context.restore();
   context.fillStyle = accent;
-  context.font = "900 26px Malgun Gothic, sans-serif";
+  context.font = `900 26px ${CANVAS_BODY_FONT}`;
   context.fillText("moment captured", x + 44, y + height - 34);
 }
 
