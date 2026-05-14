@@ -11,44 +11,42 @@ const templates = [
   {
     id: "report",
     name: "성공로그 리포트",
-    description: "사례의 전체 맥락을 균형 있게 정리하는 기본형",
+    description: "성과와 근거를 한눈에 정리하는 공식 보고서형",
     palette: ["#173d2a", "#f6be45", "#fff7e4", "#8daf63"],
+    titleFont: "Hahmlet, Noto Serif KR, Nanum Myeongjo, serif",
+    bodyFont: "Gowun Dodum, Noto Sans KR, Malgun Gothic, sans-serif",
   },
   {
     id: "magazine",
     name: "현장 매거진",
-    description: "이미지와 이야기를 크게 보여주는 감성형",
+    description: "사진과 이야기의 현장감을 크게 보여주는 매거진형",
     palette: ["#f7ead8", "#ef735c", "#214c36", "#f6be45"],
+    titleFont: "Gowun Batang, Hahmlet, serif",
+    bodyFont: "Gowun Dodum, Noto Sans KR, Malgun Gothic, sans-serif",
   },
   {
     id: "metric",
     name: "성과 숫자 스포트라이트",
-    description: "정량적 성과가 있을 때 숫자를 크게 강조하는 성과형",
+    description: "정량 성과와 핵심 메시지를 강하게 밀어주는 포스터형",
     palette: ["#173d2a", "#f6be45", "#fff7e4", "#ef735c"],
+    titleFont: "Black Han Sans, Hahmlet, sans-serif",
+    bodyFont: "Gowun Dodum, Noto Sans KR, Malgun Gothic, sans-serif",
   },
   {
     id: "timeline",
     name: "진행 여정 타임라인",
-    description: "활동 기간, 참여, 근거를 흐름으로 보여주는 과정형",
+    description: "기간, 참여, 시도, 결과를 흐름으로 보여주는 과정형",
     palette: ["#253b70", "#80d0b1", "#fff7e4", "#f6be45"],
+    titleFont: "Song Myung, Hahmlet, serif",
+    bodyFont: "Gowun Dodum, Noto Sans KR, Malgun Gothic, sans-serif",
   },
   {
     id: "quote",
     name: "한마디 포커스",
-    description: "고객/직원의 한마디를 사례 맥락과 함께 보여주는 인용형",
+    description: "고객/직원의 한마디와 메시지를 감성적으로 강조하는 인용형",
     palette: ["#151515", "#fff3d3", "#ef735c", "#f6be45"],
-  },
-  {
-    id: "compare",
-    name: "변화 비교 보드",
-    description: "문제와 시도, 결과를 좌우 비교로 정리하는 개선형",
-    palette: ["#e8f2f0", "#214c36", "#3f70d6", "#f6be45"],
-  },
-  {
-    id: "checklist",
-    name: "핵심 포인트 체크리스트",
-    description: "공유 사례의 핵심 요소를 읽기 쉬운 체크리스트로 정리",
-    palette: ["#253b70", "#80d0b1", "#fff7e4", "#f6be45"],
+    titleFont: "Song Myung, Hahmlet, serif",
+    bodyFont: "Gowun Dodum, Noto Sans KR, Malgun Gothic, sans-serif",
   },
 ];
 
@@ -643,7 +641,7 @@ function updatePrompt() {
     `이야기 요약: ${story.summary}`,
     `근거/에피소드: ${story.evidence}`,
     `고객/직원의 한마디: "${story.quote}"`,
-    `디자인 지시: 공유된 사례의 전체 내용을 균형 있게 반영하고, 템플릿에 따라 정보 배치와 디자인만 다르게 구성해 주세요. 1080x1080 정사각형, 한국어 타이포그래피가 잘 보이게, 기업 내부 공유용으로 신뢰감 있게, 이미지와 텍스트의 여백을 충분히 확보.`,
+    `디자인 지시: 공유된 사례의 전체 내용을 균형 있게 반영하되, 템플릿 제목에 맞춰 폰트, 정보 위계, 이미지 위치, 여백, 그래픽 장식을 분명히 다르게 구성해 주세요. 1080x1080 정사각형, 한국어 타이포그래피가 잘 보이게, 텍스트는 프레임을 벗어나지 않게 충분한 여백을 확보.`,
   ].join("\n");
 }
 
@@ -820,22 +818,35 @@ function renderGallery() {
   });
 
   $$("[data-delete-card]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const card = cards.find((item) => item.id === button.dataset.deleteCard);
-      if (!card) return;
-      if (sharedStorageAvailable) {
-        alert("공용 저장소 모드에서는 웹 화면 삭제를 막아두었습니다. Supabase 관리자 화면에서 삭제해 주세요.");
-        return;
-      }
-
-      const confirmed = confirm(`‘${card.title}’ 카드뉴스 시안을 저장함에서 삭제할까요?`);
-      if (!confirmed) return;
-
-      cards = cards.filter((item) => item.id !== card.id);
-      saveToStorage(STORAGE_KEYS.cards, cards);
-      renderAll();
-    });
+    button.addEventListener("click", () => handleCardDelete(button.dataset.deleteCard));
   });
+}
+
+async function handleCardDelete(cardId) {
+  const card = cards.find((item) => item.id === cardId);
+  if (!card) return;
+
+  const confirmed = await showConfirmDialog({
+    title: "카드뉴스 시안 삭제",
+    message: "정말 삭제하시겠습니까? 본인의 시안이 맞는지 다시 확인해주세요",
+    confirmText: "삭제",
+    cancelText: "돌아가기",
+  });
+
+  if (!confirmed) return;
+
+  try {
+    if (sharedStorageAvailable) {
+      await deleteRemoteCard(card.id);
+    }
+
+    cards = cards.filter((item) => item.id !== card.id);
+    saveToStorage(STORAGE_KEYS.cards, cards);
+    renderAll();
+  } catch (error) {
+    console.error("카드뉴스 시안 삭제 실패", error);
+    alert("카드뉴스 시안을 삭제하지 못했습니다. Supabase 삭제 정책이 적용되었는지 확인해 주세요.");
+  }
 }
 
 async function fetchRemoteStories() {
@@ -880,6 +891,13 @@ async function deleteRemoteStory(storyId, password) {
   });
 
   return result === true;
+}
+
+async function deleteRemoteCard(cardId) {
+  await supabaseFetch(`/rest/v1/cards?id=eq.${encodeURIComponent(cardId)}`, {
+    method: "DELETE",
+    headers: { Prefer: "return=minimal" },
+  });
 }
 
 async function supabaseFetch(path, options = {}) {
@@ -1059,6 +1077,9 @@ function drawPlaceholderCard() {
 async function drawCard(story, template, tone) {
   const canvas = elements.cardCanvas;
   const context = canvas.getContext("2d");
+  if (document.fonts?.ready) {
+    await document.fonts.ready;
+  }
   const image = story.imageData ? await loadImage(story.imageData) : null;
 
   context.clearRect(0, 0, canvas.width, canvas.height);
@@ -1068,8 +1089,6 @@ async function drawCard(story, template, tone) {
   if (template.id === "metric") drawMetricDraft(context, story, template, image, tone);
   if (template.id === "timeline") drawTimelineDraft(context, story, template, image, tone);
   if (template.id === "quote") drawQuoteDraft(context, story, template, image, tone);
-  if (template.id === "compare") drawCompareDraft(context, story, template, image, tone);
-  if (template.id === "checklist") drawChecklistDraft(context, story, template, image, tone);
 }
 
 function getStorySections(story) {
@@ -1083,121 +1102,158 @@ function getStorySections(story) {
   ].filter((section) => section.value);
 }
 
+function getCanvasTitleFont(template) {
+  return template.titleFont || CANVAS_TITLE_FONT;
+}
+
+function getCanvasBodyFont(template) {
+  return template.bodyFont || CANVAS_BODY_FONT;
+}
+
+function setCanvasFont(context, weight, size, family) {
+  context.font = `${weight} ${size}px ${family}`;
+}
+
 function drawReportDraft(context, story, template, image) {
   const [dark, gold, cream, moss] = template.palette;
-  drawGradient(context, dark, "#2d684a");
-  drawCircle(context, 890, 120, 230, "rgba(246, 190, 69, 0.62)");
-  drawCircle(context, 160, 930, 250, "rgba(141, 175, 99, 0.24)");
-  drawImagePanel(context, image, 694, 110, 300, 300, 44);
+  const titleFont = getCanvasTitleFont(template);
+  const bodyFont = getCanvasBodyFont(template);
+  drawGradient(context, dark, "#2f6b4d");
+  drawCircle(context, 895, 140, 220, "rgba(246, 190, 69, 0.55)");
+  drawCircle(context, 120, 960, 260, "rgba(141, 175, 99, 0.25)");
+  drawRoundedRect(context, 70, 72, 940, 930, 46, "rgba(255, 247, 228, 0.94)");
+  drawImagePanel(context, image, 740, 120, 220, 190, 34);
 
-  drawDivisionHeader(context, story, 74, 72, cream, "rgba(255,255,255,0.16)", gold);
-  drawPillText(context, story.reportMonth, 74, 142, dark, gold);
-  drawHeadline(context, story.title, 74, 180, 590, cream, 52);
+  drawDivisionHeader(context, story, 112, 118, cream, dark, gold, bodyFont);
+  drawPillText(context, story.reportMonth, 112, 190, dark, gold, bodyFont);
+  drawHeadline(context, story.title, 112, 280, 570, dark, 44, 3, titleFont);
 
-  context.fillStyle = gold;
-  context.font = `900 34px ${CANVAS_BODY_FONT}`;
-  wrapText(context, story.desiredMessage, 74, 390, 560, 44, 2);
+  drawRoundedRect(context, 112, 448, 850, 114, 28, "rgba(246, 190, 69, 0.22)");
+  context.fillStyle = dark;
+  setCanvasFont(context, 900, 31, bodyFont);
+  wrapText(context, story.desiredMessage, 146, 510, 780, 38, 2);
 
-  drawRoundedRect(context, 74, 492, 932, 408, 34, "rgba(255, 247, 228, 0.92)");
-  drawSectionRows(context, getStorySections(story), 110, 548, 860, {
+  drawRoundedRect(context, 112, 610, 850, 280, 30, "rgba(255, 255, 255, 0.74)");
+  drawSectionRows(context, getStorySections(story).slice(0, 4), 150, 664, 770, {
     labelColor: dark,
     textColor: "#37443b",
-    rowGap: 54,
-    maxLines: 2,
+    rowGap: 58,
+    maxLines: 1,
+    labelWidth: 170,
+    bodyFont,
   });
-  drawFooter(context, `${story.division} · ${story.reportMonth}`, moss, cream);
+  drawFooter(context, `${story.division} · ${story.reportMonth}`, moss, dark, bodyFont);
 }
 
 function drawMagazineDraft(context, story, template, image) {
   const [paper, coral, forest, gold] = template.palette;
+  const titleFont = getCanvasTitleFont(template);
+  const bodyFont = getCanvasBodyFont(template);
   drawGradient(context, "#fff7e4", paper);
-  drawCircle(context, 130, 120, 110, "rgba(239, 115, 92, 0.22)");
-  drawCircle(context, 940, 940, 210, "rgba(246, 190, 69, 0.34)");
-  drawPolaroid(context, image, 70, 70, 465, 500, coral);
+  drawRoundedRect(context, 44, 44, 992, 992, 52, coral);
+  drawRoundedRect(context, 70, 70, 940, 940, 44, "#fffaf0");
+  drawPolaroid(context, image, 106, 118, 510, 560, coral, bodyFont);
 
-  drawDivisionHeader(context, story, 590, 88, "#fff7e4", forest, gold);
-  drawPillText(context, story.reportMonth, 590, 156, forest, gold);
-  drawHeadline(context, story.title, 590, 180, 410, forest, 42);
+  drawDivisionHeader(context, story, 656, 120, "#fff7e4", forest, gold, bodyFont);
+  drawPillText(context, story.reportMonth, 656, 192, forest, gold, bodyFont);
+  drawHeadline(context, story.title, 656, 282, 310, forest, 42, 4, titleFont);
   context.fillStyle = coral;
-  context.font = `900 30px ${CANVAS_BODY_FONT}`;
-  wrapText(context, story.desiredMessage, 590, 390, 390, 38, 3);
+  setCanvasFont(context, 900, 29, bodyFont);
+  wrapText(context, story.desiredMessage, 656, 540, 310, 36, 3);
 
-  drawRoundedRect(context, 70, 620, 940, 302, 32, "rgba(255, 250, 240, 0.88)");
-  drawSectionRows(context, getStorySections(story), 106, 674, 850, {
-    labelColor: forest,
-    textColor: "#506259",
-    rowGap: 39,
-    maxLines: 1,
-  });
-  drawFooter(context, `${story.division} · ${story.reportMonth}`, gold, forest);
+  drawRoundedRect(context, 106, 724, 870, 196, 34, "rgba(33, 76, 54, 0.08)");
+  context.fillStyle = forest;
+  setCanvasFont(context, 900, 27, bodyFont);
+  context.fillText("현장의 이야기", 146, 780);
+  context.fillStyle = "#506259";
+  setCanvasFont(context, 700, 25, bodyFont);
+  wrapText(context, story.summary, 146, 832, 790, 32, 3);
+  drawFooter(context, `${story.division} · ${story.reportMonth}`, gold, forest, bodyFont);
 }
 
 function drawMetricDraft(context, story, template, image) {
   const [dark, gold, cream, coral] = template.palette;
-  drawGradient(context, dark, "#183c2c");
-  drawCircle(context, 220, 240, 220, "rgba(246, 190, 69, 0.30)");
-  drawImagePanel(context, image, 720, 90, 260, 260, 42);
-  drawDivisionHeader(context, story, 74, 72, cream, "rgba(255,255,255,0.16)", gold);
+  const titleFont = getCanvasTitleFont(template);
+  const bodyFont = getCanvasBodyFont(template);
+  drawGradient(context, dark, "#101914");
+  drawCircle(context, 170, 210, 220, "rgba(246, 190, 69, 0.32)");
+  drawCircle(context, 970, 200, 170, "rgba(239, 115, 92, 0.24)");
+  drawImagePanel(context, image, 760, 84, 220, 220, 38);
+  drawDivisionHeader(context, story, 74, 72, cream, "rgba(255,255,255,0.14)", gold, bodyFont);
 
   context.fillStyle = gold;
-  context.font = `900 58px ${CANVAS_TITLE_FONT}`;
-  wrapText(context, story.impactMetric, 74, 245, 610, 68, 3);
-  drawRoundedRect(context, 74, 500, 932, 220, 36, "rgba(255,247,228,0.92)");
+  setCanvasFont(context, 900, getAdaptiveFontSize(context, story.impactMetric, 680, 76, 46, titleFont, 900, 3), titleFont);
+  wrapText(context, story.impactMetric, 74, 260, 670, 82, 3);
+
+  drawRoundedRect(context, 74, 508, 932, 176, 34, "rgba(255,247,228,0.94)");
   context.fillStyle = dark;
-  context.font = `900 34px ${CANVAS_BODY_FONT}`;
-  wrapText(context, story.desiredMessage, 112, 570, 840, 44, 2);
-  context.fillStyle = "#465349";
-  context.font = `700 27px ${CANVAS_BODY_FONT}`;
-  wrapText(context, story.summary, 112, 676, 840, 36, 2);
-  drawRoundedRect(context, 74, 760, 932, 138, 30, "rgba(239,115,92,0.20)");
-  context.fillStyle = cream;
-  context.font = `900 24px ${CANVAS_BODY_FONT}`;
-  drawPillText(context, "근거/에피소드", 112, 790, dark, gold);
-  context.fillStyle = cream;
-  context.font = `700 25px ${CANVAS_BODY_FONT}`;
-  wrapText(context, story.evidence, 112, 870, 840, 32, 1);
-  drawFooter(context, `${story.division} · ${story.reportMonth}`, coral, cream);
+  setCanvasFont(context, 900, 36, bodyFont);
+  wrapText(context, story.desiredMessage, 112, 582, 840, 44, 2);
+
+  const cards = [
+    ["무엇을", story.summary],
+    ["누가", story.participants],
+    ["근거", story.evidence],
+  ];
+  cards.forEach(([label, value], index) => {
+    const x = 74 + index * 318;
+    drawRoundedRect(context, x, 730, 292, 164, 28, index === 1 ? "rgba(246,190,69,0.18)" : "rgba(255,255,255,0.12)");
+    context.fillStyle = gold;
+    setCanvasFont(context, 900, 24, bodyFont);
+    context.fillText(label, x + 28, 786);
+    context.fillStyle = cream;
+    setCanvasFont(context, 700, 22, bodyFont);
+    wrapText(context, value, x + 28, 832, 236, 28, 2);
+  });
+  drawFooter(context, `${story.division} · ${story.reportMonth}`, coral, cream, bodyFont);
 }
 
 function drawTimelineDraft(context, story, template, image) {
   const [blue, mint, cream, gold] = template.palette;
+  const titleFont = getCanvasTitleFont(template);
+  const bodyFont = getCanvasBodyFont(template);
   drawGradient(context, blue, "#13264d");
-  drawRoundedRect(context, 60, 60, 960, 960, 56, "rgba(255, 247, 228, 0.94)");
-  drawDivisionHeader(context, story, 104, 102, cream, blue, gold);
-  drawHeadline(context, story.title, 104, 210, 780, blue, 46);
-  drawImagePanel(context, image, 774, 92, 170, 170, 34);
+  drawRoundedRect(context, 60, 60, 960, 960, 56, "rgba(255, 247, 228, 0.96)");
+  drawDivisionHeader(context, story, 104, 102, cream, blue, gold, bodyFont);
+  drawHeadline(context, story.title, 104, 214, 720, blue, 42, 3, titleFont);
+  drawImagePanel(context, image, 808, 104, 150, 150, 30);
 
   const steps = [
-    ["기간", story.period],
-    ["참여", story.participants],
-    ["시도", story.summary],
-    ["결과", story.impactMetric],
-    ["근거", story.evidence],
+    ["1. 기간", story.period],
+    ["2. 참여", story.participants],
+    ["3. 시도", story.summary],
+    ["4. 결과", story.impactMetric || story.desiredMessage],
   ];
 
   context.strokeStyle = mint;
-  context.lineWidth = 8;
+  context.lineWidth = 7;
   context.beginPath();
-  context.moveTo(154, 388);
-  context.lineTo(154, 865);
+  context.moveTo(164, 405);
+  context.lineTo(164, 838);
   context.stroke();
 
   steps.forEach(([label, value], index) => {
-    const y = 390 + index * 98;
-    drawCircle(context, 154, y - 8, 20, index % 2 ? gold : mint);
+    const y = 410 + index * 112;
+    drawCircle(context, 164, y - 8, 22, index % 2 ? gold : mint);
     context.fillStyle = blue;
-    context.font = `900 26px ${CANVAS_BODY_FONT}`;
-    context.fillText(label, 204, y);
+    setCanvasFont(context, 900, 25, bodyFont);
+    context.fillText(label, 214, y);
     context.fillStyle = "#38443d";
-    context.font = `700 25px ${CANVAS_BODY_FONT}`;
-    wrapText(context, value, 304, y, 620, 31, 2);
+    setCanvasFont(context, 700, 25, bodyFont);
+    wrapText(context, value, 214, y + 42, 720, 31, 2);
   });
 
-  drawFooter(context, `${story.division} · ${story.reportMonth}`, mint, blue);
+  drawRoundedRect(context, 104, 884, 872, 54, 24, "rgba(128,208,177,0.26)");
+  context.fillStyle = blue;
+  setCanvasFont(context, 900, 25, bodyFont);
+  wrapText(context, story.desiredMessage, 136, 920, 810, 30, 1);
+  drawFooter(context, `${story.division} · ${story.reportMonth}`, mint, blue, bodyFont);
 }
 
 function drawQuoteDraft(context, story, template, image) {
   const [black, cream, coral, gold] = template.palette;
+  const titleFont = getCanvasTitleFont(template);
+  const bodyFont = getCanvasBodyFont(template);
   drawGradient(context, black, "#303030");
   if (image) {
     context.globalAlpha = 0.24;
@@ -1206,80 +1262,24 @@ function drawQuoteDraft(context, story, template, image) {
     context.fillStyle = "rgba(0,0,0,0.52)";
     context.fillRect(0, 0, 1080, 1080);
   }
-  drawDivisionHeader(context, story, 78, 78, black, gold, coral);
-  drawHeadline(context, story.title, 78, 185, 880, cream, 46);
+  drawDivisionHeader(context, story, 78, 78, black, gold, coral, bodyFont);
+  drawHeadline(context, story.title, 78, 184, 880, cream, 42, 3, titleFont);
 
   context.fillStyle = coral;
-  context.font = `900 92px ${CANVAS_TITLE_FONT}`;
+  setCanvasFont(context, 900, 92, titleFont);
   context.fillText("“", 76, 390);
   context.fillStyle = cream;
-  context.font = `800 50px ${CANVAS_TITLE_FONT}`;
-  wrapText(context, story.quote, 142, 395, 820, 62, 4);
+  setCanvasFont(context, 800, 48, titleFont);
+  wrapText(context, story.quote || story.desiredMessage, 142, 395, 820, 60, 4);
 
-  drawRoundedRect(context, 92, 712, 896, 154, 30, "rgba(255,243,211,0.15)");
+  drawRoundedRect(context, 92, 704, 896, 172, 30, "rgba(255,243,211,0.15)");
   context.fillStyle = gold;
-  context.font = `900 26px ${CANVAS_BODY_FONT}`;
-  context.fillText("사례 요약", 128, 765);
+  setCanvasFont(context, 900, 26, bodyFont);
+  context.fillText("강조 메시지", 128, 758);
   context.fillStyle = "rgba(255,243,211,0.88)";
-  context.font = `700 25px ${CANVAS_BODY_FONT}`;
-  wrapText(context, story.summary, 128, 810, 820, 32, 2);
-  drawFooter(context, `${story.division} · ${story.reportMonth}`, gold, cream);
-}
-
-function drawCompareDraft(context, story, template, image) {
-  const [paper, forest, blue, gold] = template.palette;
-  drawGradient(context, paper, "#f8f2e6");
-  drawDivisionHeader(context, story, 74, 74, "#fff7e4", forest, gold);
-  drawHeadline(context, story.desiredMessage, 74, 176, 820, forest, 48);
-  drawImagePanel(context, image, 802, 72, 190, 190, 34);
-
-  drawRoundedRect(context, 74, 390, 440, 368, 34, "rgba(33, 76, 54, 0.1)");
-  drawRoundedRect(context, 566, 390, 440, 368, 34, "rgba(63, 112, 214, 0.12)");
-  drawPillText(context, "문제와 시도", 112, 430, "#fff7e4", forest);
-  drawPillText(context, "성과와 근거", 604, 430, "#fff7e4", blue);
-
-  context.fillStyle = forest;
-  context.font = `800 30px ${CANVAS_BODY_FONT}`;
-  wrapText(context, story.summary, 112, 535, 330, 42, 4);
-  context.fillStyle = blue;
-  wrapText(context, `${story.impactMetric} ${story.evidence}`, 604, 535, 330, 42, 4);
-
-  drawRoundedRect(context, 74, 802, 932, 118, 28, gold);
-  context.fillStyle = forest;
-  context.font = `900 30px ${CANVAS_BODY_FONT}`;
-  wrapText(context, story.participants, 112, 870, 840, 36, 1);
-  drawFooter(context, `${story.division} · ${story.reportMonth}`, gold, forest);
-}
-
-function drawChecklistDraft(context, story, template, image) {
-  const [blue, mint, cream, gold] = template.palette;
-  drawGradient(context, "#f9f2df", "#eaf0df");
-  drawRoundedRect(context, 60, 60, 960, 960, 56, "rgba(255,250,240,0.92)");
-  drawCircle(context, 900, 100, 150, "rgba(246,190,69,0.34)");
-  drawDivisionHeader(context, story, 104, 100, cream, blue, gold);
-  drawHeadline(context, story.title, 104, 206, 780, blue, 44);
-
-  const items = [
-    ["무엇을 했나요?", story.summary],
-    ["누가 함께했나요?", story.participants],
-    ["어떤 성과가 있었나요?", story.impactMetric],
-    ["어떤 근거가 있나요?", story.evidence],
-    ["강조 문구", story.desiredMessage],
-  ];
-
-  items.forEach(([label, value], index) => {
-    const y = 392 + index * 104;
-    drawRoundedRect(context, 104, y, 872, 82, 24, index % 2 ? "rgba(128,208,177,0.22)" : "rgba(246,190,69,0.22)");
-    drawCircle(context, 146, y + 41, 18, index % 2 ? mint : gold);
-    context.fillStyle = blue;
-    context.font = `900 23px ${CANVAS_BODY_FONT}`;
-    context.fillText(label, 184, y + 35);
-    context.fillStyle = "#34443b";
-    context.font = `700 23px ${CANVAS_BODY_FONT}`;
-    wrapText(context, value, 184, y + 66, 750, 28, 1);
-  });
-
-  drawFooter(context, `${story.division} · ${story.reportMonth}`, mint, blue);
+  setCanvasFont(context, 700, 25, bodyFont);
+  wrapText(context, story.desiredMessage || story.summary, 128, 808, 820, 32, 2);
+  drawFooter(context, `${story.division} · ${story.reportMonth}`, gold, cream, bodyFont);
 }
 
 function drawGradient(context, start, end) {
@@ -1290,21 +1290,22 @@ function drawGradient(context, start, end) {
   context.fillRect(0, 0, 1080, 1080);
 }
 
-function drawPillText(context, text, x, y, textColor, fillColor) {
+function drawPillText(context, text, x, y, textColor, fillColor, fontFamily = CANVAS_BODY_FONT) {
   context.save();
-  context.font = `900 24px ${CANVAS_BODY_FONT}`;
+  setCanvasFont(context, 900, 24, fontFamily);
   const metrics = context.measureText(text);
-  const width = metrics.width + 42;
+  const width = Math.min(360, metrics.width + 42);
   drawRoundedRect(context, x, y, width, 48, 24, fillColor);
   context.fillStyle = textColor;
-  context.fillText(text, x + 21, y + 32);
+  drawEllipsizedText(context, text, x + 21, y + 32, width - 42);
   context.restore();
 }
 
-function drawHeadline(context, text, x, y, maxWidth, color, size) {
+function drawHeadline(context, text, x, y, maxWidth, color, size, maxLines = 4, fontFamily = CANVAS_TITLE_FONT) {
   context.fillStyle = color;
-  context.font = `900 ${size}px ${CANVAS_TITLE_FONT}`;
-  wrapText(context, text, x, y, maxWidth, size * 1.18, 5);
+  const adjustedSize = getAdaptiveFontSize(context, text, maxWidth, size, 28, fontFamily, 900, maxLines);
+  setCanvasFont(context, 900, adjustedSize, fontFamily);
+  wrapText(context, text, x, y, maxWidth, adjustedSize * 1.18, maxLines);
 }
 
 function drawMetricBlock(context, text, x, y, background, color) {
@@ -1315,36 +1316,36 @@ function drawMetricBlock(context, text, x, y, background, color) {
 }
 
 function drawSectionRows(context, sections, x, y, width, options) {
-  const { labelColor, textColor, rowGap, maxLines } = options;
+  const { labelColor, textColor, rowGap, maxLines, labelWidth = 160, bodyFont = CANVAS_BODY_FONT } = options;
 
   sections.forEach((section, index) => {
     const rowY = y + index * rowGap;
     context.fillStyle = labelColor;
-    context.font = `900 22px ${CANVAS_BODY_FONT}`;
-    context.fillText(section.label, x, rowY);
+    setCanvasFont(context, 900, 22, bodyFont);
+    drawEllipsizedText(context, section.label, x, rowY, labelWidth - 18);
     context.fillStyle = textColor;
-    context.font = `700 24px ${CANVAS_BODY_FONT}`;
-    wrapText(context, section.value, x + 160, rowY, width - 160, 29, maxLines);
+    setCanvasFont(context, 700, 24, bodyFont);
+    wrapText(context, section.value, x + labelWidth, rowY, width - labelWidth, 29, maxLines);
   });
 }
 
-function drawDivisionHeader(context, story, x, y, textColor, fillColor, accentColor) {
+function drawDivisionHeader(context, story, x, y, textColor, fillColor, accentColor, fontFamily = CANVAS_BODY_FONT) {
   context.save();
   const label = `본부/실 · ${story.division}`;
-  context.font = `900 30px ${CANVAS_BODY_FONT}`;
+  setCanvasFont(context, 900, 30, fontFamily);
   const width = Math.min(430, context.measureText(label).width + 52);
   drawRoundedRect(context, x, y, width, 58, 26, fillColor);
   drawRoundedRect(context, x + 14, y + 17, 24, 24, 12, accentColor);
   context.fillStyle = textColor;
-  context.fillText(label, x + 50, y + 38);
+  drawEllipsizedText(context, label, x + 50, y + 38, width - 66);
   context.restore();
 }
 
-function drawFooter(context, text, accent, color) {
+function drawFooter(context, text, accent, color, fontFamily = CANVAS_BODY_FONT) {
   drawRoundedRect(context, 74, 984, 932, 4, 2, accent);
   context.fillStyle = color;
-  context.font = `800 22px ${CANVAS_BODY_FONT}`;
-  context.fillText(text, 74, 950);
+  setCanvasFont(context, 800, 22, fontFamily);
+  drawEllipsizedText(context, text, 74, 950, 560);
   context.textAlign = "right";
   context.fillText("Monthly Card News", 1006, 950);
   context.textAlign = "left";
@@ -1364,7 +1365,7 @@ function drawImagePanel(context, image, x, y, width, height, radius) {
   context.restore();
 }
 
-function drawPolaroid(context, image, x, y, width, height, accent) {
+function drawPolaroid(context, image, x, y, width, height, accent, fontFamily = CANVAS_BODY_FONT) {
   drawRoundedRect(context, x, y, width, height, 34, "#fffaf0");
   drawRoundedRect(context, x + 28, y + 28, width - 56, height - 96, 24, "#e7eadf");
   context.save();
@@ -1378,7 +1379,7 @@ function drawPolaroid(context, image, x, y, width, height, accent) {
 
   context.restore();
   context.fillStyle = accent;
-  context.font = `900 26px ${CANVAS_BODY_FONT}`;
+  setCanvasFont(context, 900, 26, fontFamily);
   context.fillText("moment captured", x + 44, y + height - 34);
 }
 
@@ -1436,24 +1437,72 @@ function clipRoundedRect(context, x, y, width, height, radius) {
   context.clip();
 }
 
+function getAdaptiveFontSize(context, text, maxWidth, startSize, minSize, fontFamily, weight, maxLines) {
+  let size = startSize;
+
+  while (size > minSize) {
+    setCanvasFont(context, weight, size, fontFamily);
+    if (estimateWrappedLineCount(context, text, maxWidth) <= maxLines) break;
+    size -= 2;
+  }
+
+  return size;
+}
+
+function estimateWrappedLineCount(context, text, maxWidth) {
+  const tokens = getWrapTokens(context, text, maxWidth);
+  let line = "";
+  let count = 0;
+
+  tokens.forEach((token) => {
+    const separator = token.glue && line ? token.glue : "";
+    const testLine = `${line}${separator}${token.text}`;
+
+    if (context.measureText(testLine).width > maxWidth && line) {
+      count += 1;
+      line = token.text;
+    } else {
+      line = testLine;
+    }
+  });
+
+  return line ? count + 1 : count;
+}
+
+function getWrapTokens(context, text, maxWidth) {
+  return String(text || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .flatMap((word) => {
+      if (context.measureText(word).width <= maxWidth) {
+        return [{ text: word, glue: " " }];
+      }
+
+      return Array.from(word).map((character) => ({ text: character, glue: "" }));
+    });
+}
+
 function wrapText(context, text, x, y, maxWidth, lineHeight, maxLines = 99) {
-  const words = String(text).split(/\s+/);
+  const tokens = getWrapTokens(context, text, maxWidth);
   let line = "";
   let lineCount = 0;
 
-  for (let index = 0; index < words.length; index += 1) {
-    const testLine = line ? `${line} ${words[index]}` : words[index];
+  for (let index = 0; index < tokens.length; index += 1) {
+    const token = tokens[index];
+    const separator = token.glue && line ? token.glue : "";
+    const testLine = `${line}${separator}${token.text}`;
     const metrics = context.measureText(testLine);
 
     if (metrics.width > maxWidth && line) {
       context.fillText(line, x, y);
-      line = words[index];
+      line = token.text;
       y += lineHeight;
       lineCount += 1;
 
       if (lineCount >= maxLines - 1) {
-        const remaining = words.slice(index).join(" ");
-        drawEllipsizedText(context, `${line} ${remaining}`, x, y, maxWidth);
+        const remaining = tokens.slice(index).map((item) => item.text).join("");
+        drawEllipsizedText(context, `${line}${remaining}`, x, y, maxWidth);
         return;
       }
     } else {
@@ -1465,11 +1514,51 @@ function wrapText(context, text, x, y, maxWidth, lineHeight, maxLines = 99) {
 }
 
 function drawEllipsizedText(context, text, x, y, maxWidth) {
-  let output = String(text);
+  let output = String(text || "");
   while (output.length > 0 && context.measureText(`${output}...`).width > maxWidth) {
     output = output.slice(0, -1);
   }
-  context.fillText(`${output}...`, x, y);
+
+  context.fillText(output.length < String(text || "").length ? `${output}...` : output, x, y);
+}
+
+function showConfirmDialog({ title, message, confirmText, cancelText }) {
+  return new Promise((resolve) => {
+    const previous = document.querySelector(".confirm-backdrop");
+    previous?.remove();
+
+    const backdrop = document.createElement("div");
+    backdrop.className = "confirm-backdrop";
+    backdrop.innerHTML = `
+      <section class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="confirmDialogTitle">
+        <h2 id="confirmDialogTitle">${escapeHtml(title)}</h2>
+        <p>${escapeHtml(message)}</p>
+        <div class="confirm-actions">
+          <button class="primary-action danger-action" type="button" data-confirm-action>${escapeHtml(confirmText)}</button>
+          <button class="ghost-action" type="button" data-cancel-action>${escapeHtml(cancelText)}</button>
+        </div>
+      </section>
+    `;
+
+    const close = (result) => {
+      document.removeEventListener("keydown", handleEscape);
+      backdrop.remove();
+      resolve(result);
+    };
+
+    const handleEscape = (event) => {
+      if (event.key === "Escape") close(false);
+    };
+
+    backdrop.addEventListener("click", (event) => {
+      if (event.target === backdrop) close(false);
+    });
+    backdrop.querySelector("[data-confirm-action]").addEventListener("click", () => close(true));
+    backdrop.querySelector("[data-cancel-action]").addEventListener("click", () => close(false));
+    document.addEventListener("keydown", handleEscape);
+    document.body.appendChild(backdrop);
+    backdrop.querySelector("[data-cancel-action]").focus();
+  });
 }
 
 function delay(ms) {

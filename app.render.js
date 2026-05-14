@@ -162,21 +162,34 @@ function renderGallery() {
   });
 
   $$("[data-delete-card]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const card = cards.find((item) => item.id === button.dataset.deleteCard);
-      if (!card) return;
-      if (sharedStorageAvailable) {
-        alert("공용 저장소 모드에서는 웹 화면 삭제를 막아두었습니다. Supabase 관리자 화면에서 삭제해 주세요.");
-        return;
-      }
-
-      const confirmed = confirm(`‘${card.title}’ 카드뉴스 시안을 저장함에서 삭제할까요?`);
-      if (!confirmed) return;
-
-      cards = cards.filter((item) => item.id !== card.id);
-      saveToStorage(STORAGE_KEYS.cards, cards);
-      renderAll();
-    });
+    button.addEventListener("click", () => handleCardDelete(button.dataset.deleteCard));
   });
+}
+
+async function handleCardDelete(cardId) {
+  const card = cards.find((item) => item.id === cardId);
+  if (!card) return;
+
+  const confirmed = await showConfirmDialog({
+    title: "카드뉴스 시안 삭제",
+    message: "정말 삭제하시겠습니까? 본인의 시안이 맞는지 다시 확인해주세요",
+    confirmText: "삭제",
+    cancelText: "돌아가기",
+  });
+
+  if (!confirmed) return;
+
+  try {
+    if (sharedStorageAvailable) {
+      await deleteRemoteCard(card.id);
+    }
+
+    cards = cards.filter((item) => item.id !== card.id);
+    saveToStorage(STORAGE_KEYS.cards, cards);
+    renderAll();
+  } catch (error) {
+    console.error("카드뉴스 시안 삭제 실패", error);
+    alert("카드뉴스 시안을 삭제하지 못했습니다. Supabase 삭제 정책이 적용되었는지 확인해 주세요.");
+  }
 }
 

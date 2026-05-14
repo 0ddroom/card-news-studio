@@ -1,34 +1,3 @@
-function drawChecklistDraft(context, story, template, image) {
-  const [blue, mint, cream, gold] = template.palette;
-  drawGradient(context, "#f9f2df", "#eaf0df");
-  drawRoundedRect(context, 60, 60, 960, 960, 56, "rgba(255,250,240,0.92)");
-  drawCircle(context, 900, 100, 150, "rgba(246,190,69,0.34)");
-  drawDivisionHeader(context, story, 104, 100, cream, blue, gold);
-  drawHeadline(context, story.title, 104, 206, 780, blue, 44);
-
-  const items = [
-    ["무엇을 했나요?", story.summary],
-    ["누가 함께했나요?", story.participants],
-    ["어떤 성과가 있었나요?", story.impactMetric],
-    ["어떤 근거가 있나요?", story.evidence],
-    ["강조 문구", story.desiredMessage],
-  ];
-
-  items.forEach(([label, value], index) => {
-    const y = 392 + index * 104;
-    drawRoundedRect(context, 104, y, 872, 82, 24, index % 2 ? "rgba(128,208,177,0.22)" : "rgba(246,190,69,0.22)");
-    drawCircle(context, 146, y + 41, 18, index % 2 ? mint : gold);
-    context.fillStyle = blue;
-    context.font = `900 23px ${CANVAS_BODY_FONT}`;
-    context.fillText(label, 184, y + 35);
-    context.fillStyle = "#34443b";
-    context.font = `700 23px ${CANVAS_BODY_FONT}`;
-    wrapText(context, value, 184, y + 66, 750, 28, 1);
-  });
-
-  drawFooter(context, `${story.division} · ${story.reportMonth}`, mint, blue);
-}
-
 function drawGradient(context, start, end) {
   const gradient = context.createLinearGradient(0, 0, 1080, 1080);
   gradient.addColorStop(0, start);
@@ -37,21 +6,22 @@ function drawGradient(context, start, end) {
   context.fillRect(0, 0, 1080, 1080);
 }
 
-function drawPillText(context, text, x, y, textColor, fillColor) {
+function drawPillText(context, text, x, y, textColor, fillColor, fontFamily = CANVAS_BODY_FONT) {
   context.save();
-  context.font = `900 24px ${CANVAS_BODY_FONT}`;
+  setCanvasFont(context, 900, 24, fontFamily);
   const metrics = context.measureText(text);
-  const width = metrics.width + 42;
+  const width = Math.min(360, metrics.width + 42);
   drawRoundedRect(context, x, y, width, 48, 24, fillColor);
   context.fillStyle = textColor;
-  context.fillText(text, x + 21, y + 32);
+  drawEllipsizedText(context, text, x + 21, y + 32, width - 42);
   context.restore();
 }
 
-function drawHeadline(context, text, x, y, maxWidth, color, size) {
+function drawHeadline(context, text, x, y, maxWidth, color, size, maxLines = 4, fontFamily = CANVAS_TITLE_FONT) {
   context.fillStyle = color;
-  context.font = `900 ${size}px ${CANVAS_TITLE_FONT}`;
-  wrapText(context, text, x, y, maxWidth, size * 1.18, 5);
+  const adjustedSize = getAdaptiveFontSize(context, text, maxWidth, size, 28, fontFamily, 900, maxLines);
+  setCanvasFont(context, 900, adjustedSize, fontFamily);
+  wrapText(context, text, x, y, maxWidth, adjustedSize * 1.18, maxLines);
 }
 
 function drawMetricBlock(context, text, x, y, background, color) {
@@ -62,36 +32,36 @@ function drawMetricBlock(context, text, x, y, background, color) {
 }
 
 function drawSectionRows(context, sections, x, y, width, options) {
-  const { labelColor, textColor, rowGap, maxLines } = options;
+  const { labelColor, textColor, rowGap, maxLines, labelWidth = 160, bodyFont = CANVAS_BODY_FONT } = options;
 
   sections.forEach((section, index) => {
     const rowY = y + index * rowGap;
     context.fillStyle = labelColor;
-    context.font = `900 22px ${CANVAS_BODY_FONT}`;
-    context.fillText(section.label, x, rowY);
+    setCanvasFont(context, 900, 22, bodyFont);
+    drawEllipsizedText(context, section.label, x, rowY, labelWidth - 18);
     context.fillStyle = textColor;
-    context.font = `700 24px ${CANVAS_BODY_FONT}`;
-    wrapText(context, section.value, x + 160, rowY, width - 160, 29, maxLines);
+    setCanvasFont(context, 700, 24, bodyFont);
+    wrapText(context, section.value, x + labelWidth, rowY, width - labelWidth, 29, maxLines);
   });
 }
 
-function drawDivisionHeader(context, story, x, y, textColor, fillColor, accentColor) {
+function drawDivisionHeader(context, story, x, y, textColor, fillColor, accentColor, fontFamily = CANVAS_BODY_FONT) {
   context.save();
   const label = `본부/실 · ${story.division}`;
-  context.font = `900 30px ${CANVAS_BODY_FONT}`;
+  setCanvasFont(context, 900, 30, fontFamily);
   const width = Math.min(430, context.measureText(label).width + 52);
   drawRoundedRect(context, x, y, width, 58, 26, fillColor);
   drawRoundedRect(context, x + 14, y + 17, 24, 24, 12, accentColor);
   context.fillStyle = textColor;
-  context.fillText(label, x + 50, y + 38);
+  drawEllipsizedText(context, label, x + 50, y + 38, width - 66);
   context.restore();
 }
 
-function drawFooter(context, text, accent, color) {
+function drawFooter(context, text, accent, color, fontFamily = CANVAS_BODY_FONT) {
   drawRoundedRect(context, 74, 984, 932, 4, 2, accent);
   context.fillStyle = color;
-  context.font = `800 22px ${CANVAS_BODY_FONT}`;
-  context.fillText(text, 74, 950);
+  setCanvasFont(context, 800, 22, fontFamily);
+  drawEllipsizedText(context, text, 74, 950, 560);
   context.textAlign = "right";
   context.fillText("Monthly Card News", 1006, 950);
   context.textAlign = "left";
@@ -111,7 +81,7 @@ function drawImagePanel(context, image, x, y, width, height, radius) {
   context.restore();
 }
 
-function drawPolaroid(context, image, x, y, width, height, accent) {
+function drawPolaroid(context, image, x, y, width, height, accent, fontFamily = CANVAS_BODY_FONT) {
   drawRoundedRect(context, x, y, width, height, 34, "#fffaf0");
   drawRoundedRect(context, x + 28, y + 28, width - 56, height - 96, 24, "#e7eadf");
   context.save();
@@ -125,7 +95,7 @@ function drawPolaroid(context, image, x, y, width, height, accent) {
 
   context.restore();
   context.fillStyle = accent;
-  context.font = `900 26px ${CANVAS_BODY_FONT}`;
+  setCanvasFont(context, 900, 26, fontFamily);
   context.fillText("moment captured", x + 44, y + height - 34);
 }
 

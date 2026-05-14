@@ -42,6 +42,13 @@ async function deleteRemoteStory(storyId, password) {
   return result === true;
 }
 
+async function deleteRemoteCard(cardId) {
+  await supabaseFetch(`/rest/v1/cards?id=eq.${encodeURIComponent(cardId)}`, {
+    method: "DELETE",
+    headers: { Prefer: "return=minimal" },
+  });
+}
+
 async function supabaseFetch(path, options = {}) {
   const response = await fetch(`${appConfig.supabaseUrl}${path}`, {
     ...options,

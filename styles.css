@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Hahmlet:wght@400;500;600;700;800;900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gowun+Batang:wght@400;700&family=Gowun+Dodum&family=Hahmlet:wght@400;500;600;700;800;900&family=Song+Myung&display=swap");
 
 :root {
   --ink: #17211b;
@@ -251,6 +251,12 @@ button {
 .ghost-action:hover {
   transform: translateY(-2px);
   filter: saturate(1.08);
+}
+
+.danger-action {
+  color: #fff7e4;
+  background: #b83225;
+  box-shadow: 0 14px 30px rgba(184, 50, 37, 0.22);
 }
 
 .hero-card,
@@ -616,6 +622,46 @@ main {
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 18px;
+}
+
+.confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(23, 33, 27, 0.46);
+  backdrop-filter: blur(8px);
+}
+
+.confirm-dialog {
+  width: min(460px, 100%);
+  border: 1px solid rgba(255, 255, 255, 0.76);
+  border-radius: 28px;
+  padding: 28px;
+  background: var(--paper-strong);
+  box-shadow: 0 28px 90px rgba(23, 33, 27, 0.28);
+}
+
+.confirm-dialog h2 {
+  margin: 0;
+  font-family: var(--font-title);
+  font-size: 1.7rem;
+  letter-spacing: -0.06em;
+}
+
+.confirm-dialog p {
+  margin: 14px 0 0;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
 }
 
 .tiny-button {

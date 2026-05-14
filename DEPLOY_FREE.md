@@ -42,11 +42,13 @@ window.CARD_NEWS_STUDIO_CONFIG = {
 ## 4. 이미 배포한 뒤 비밀번호 삭제 기능을 추가하는 경우
 
 이미 Supabase 프로젝트를 만들어 운영 중이라면, `supabase/migrations/2026-05-password-delete.sql`을 Supabase SQL Editor에서 한 번 더 실행해 주세요.
+카드뉴스 시안 삭제 기능까지 함께 반영하려면 `supabase/migrations/2026-05-card-delete.sql`도 이어서 실행해 주세요.
 
 이 SQL은 아래 기능을 추가합니다.
 
 - 사례 공유 시 입력한 삭제 비밀번호의 해시 저장 칸
 - 비밀번호가 일치할 때만 해당 사례를 삭제하는 함수
+- 공유된 카드뉴스 시안을 누구나 삭제할 수 있는 정책
 
 기능 추가 전에 공유된 기존 사례는 삭제 비밀번호가 없기 때문에 웹 화면에서 직접 삭제할 수 없습니다.
 
