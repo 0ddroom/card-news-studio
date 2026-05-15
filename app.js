@@ -749,7 +749,7 @@ async function handleStoryDetailView(storyId) {
 
   const input = await showCredentialDialog({
     title: "전체 내용 확인",
-    message: "사례 공유 시 입력한 삭제 비밀번호 또는 관리자 키를 입력해 주세요.",
+    message: "사례 공유 시 입력한 비밀번호를 입력해 주세요.",
     confirmText: "확인",
     cancelText: "돌아가기",
   });
@@ -758,7 +758,7 @@ async function handleStoryDetailView(storyId) {
 
   const credential = input.trim();
   if (!credential) {
-    alert("비밀번호 또는 관리자 키를 입력해 주세요.");
+    alert("비밀번호를 입력해 주세요.");
     return;
   }
 
@@ -766,7 +766,7 @@ async function handleStoryDetailView(storyId) {
   const isOwner = story.passwordHash && story.passwordHash === (await hashText(credential));
 
   if (!isAdmin && !isOwner) {
-    alert("비밀번호 또는 관리자 키가 일치하지 않습니다.");
+    alert("비밀번호가 일치하지 않습니다.");
     return;
   }
 
@@ -777,10 +777,10 @@ async function handleStoryDelete(storyId) {
   const story = stories.find((item) => item.id === storyId);
   if (!story) return;
 
-  const password = prompt("사례 공유 시 입력한 삭제 비밀번호를 입력해 주세요.");
+  const password = prompt("사례 공유 시 입력한 비밀번호를 입력해 주세요.");
   if (password === null) return;
   if (!password.trim()) {
-    alert("삭제 비밀번호를 입력해 주세요.");
+    alert("비밀번호를 입력해 주세요.");
     return;
   }
 
@@ -1571,7 +1571,6 @@ function showCredentialDialog({ title, message, confirmText, cancelText }) {
         <p>${escapeHtml(message)}</p>
         <form class="credential-form">
           <label class="credential-field">
-            비밀번호 또는 관리자 키
             <input type="password" name="credential" autocomplete="current-password" />
           </label>
           <div class="confirm-actions">

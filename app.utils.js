@@ -96,7 +96,6 @@ function showCredentialDialog({ title, message, confirmText, cancelText }) {
         <p>${escapeHtml(message)}</p>
         <form class="credential-form">
           <label class="credential-field">
-            비밀번호 또는 관리자 키
             <input type="password" name="credential" autocomplete="current-password" />
           </label>
           <div class="confirm-actions">

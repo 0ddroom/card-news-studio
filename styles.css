@@ -390,9 +390,7 @@ main {
 }
 
 .form-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 340px;
-  gap: 18px;
+  display: block;
   align-items: start;
 }
 
