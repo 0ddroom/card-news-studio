@@ -9,7 +9,7 @@ function renderAll() {
 
 function renderDashboard() {
   elements.storyCount.textContent = stories.length;
-  elements.cardCount.textContent = cards.length;
+  if (elements.cardCount) elements.cardCount.textContent = cards.length;
   elements.divisionCount.textContent = new Set(stories.map((story) => story.division)).size;
 }
 
@@ -57,9 +57,7 @@ function renderStoryList() {
             <p>${escapeHtml(story.summary)}</p>
             <p><strong>정량적 성과:</strong> ${escapeHtml(story.impactMetric)}</p>
             <div class="story-actions">
-              <button class="tiny-button" type="button" data-start-card="${story.id}">카드뉴스 시안 제작</button>
-              <button class="tiny-button alt" type="button" data-view-story="${story.id}">전체 내용 확인</button>
-              <button class="tiny-button alt" type="button" data-delete-story="${story.id}">삭제</button>
+              <button class="tiny-button" type="button" data-view-story="${story.id}">전체 내용 확인</button>
             </div>
           </div>
         </article>
@@ -67,23 +65,9 @@ function renderStoryList() {
     )
     .join("");
 
-  $$("[data-start-card]").forEach((button) => {
-    button.addEventListener("click", () => {
-      showView("studio");
-      elements.storySelect.value = button.dataset.startCard;
-      updatePrompt();
-      drawPlaceholderCard();
-    });
-  });
-
   $$("[data-view-story]").forEach((button) => {
     button.addEventListener("click", () => handleStoryDetailView(button.dataset.viewStory));
   });
-
-  $$("[data-delete-story]").forEach((button) => {
-    button.addEventListener("click", () => handleStoryDelete(button.dataset.deleteStory));
-  });
-
 }
 
 async function handleStoryDetailView(storyId) {
@@ -113,7 +97,7 @@ async function handleStoryDetailView(storyId) {
     return;
   }
 
-  showStoryDetailDialog(story);
+  showStoryDetailDialog(story, credential);
 }
 
 async function handleStoryDelete(storyId) {
@@ -158,6 +142,27 @@ async function handleStoryDelete(storyId) {
     console.error("사례 삭제 실패", error);
     alert("사례를 삭제하지 못했습니다. Supabase 마이그레이션 SQL이 적용되었는지 확인해 주세요.");
   }
+}
+
+async function deleteStoryWithCredential(story, credential) {
+  if (sharedStorageAvailable) {
+    try {
+      const canDelete = await deleteRemoteStoryWithKey(story.id, credential);
+      if (!canDelete) throw new Error("비밀번호가 일치하지 않습니다.");
+    } catch (error) {
+      if (credential !== ADMIN_VIEW_KEY) {
+        const canDelete = await deleteRemoteStory(story.id, credential);
+        if (!canDelete) throw error;
+      } else {
+        throw error;
+      }
+    }
+  }
+
+  stories = stories.filter((item) => item.id !== story.id);
+  saveToStorage(STORAGE_KEYS.stories, stories);
+  renderAll();
+  drawPlaceholderCard();
 }
 
 function renderGallery() {

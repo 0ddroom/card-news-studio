@@ -20,6 +20,34 @@ async function persistStory(story) {
   });
 }
 
+async function updateRemoteStory(story, credential) {
+  if (!sharedStorageAvailable) return;
+
+  const result = await supabaseFetch("/rest/v1/rpc/update_story_with_key", {
+    method: "POST",
+    body: JSON.stringify({
+      target_story_id: story.id,
+      plain_key: credential,
+      updated_report_month: story.reportMonth,
+      updated_division: story.division,
+      updated_owner: story.owner,
+      updated_email: story.email,
+      updated_title: story.title,
+      updated_period: story.period,
+      updated_participants: story.participants,
+      updated_summary: story.summary,
+      updated_impact_metric: story.impactMetric,
+      updated_evidence: story.evidence,
+      updated_quote: story.quote,
+      updated_desired_message: story.desiredMessage,
+    }),
+  });
+
+  if (result !== true) {
+    throw new Error("사례 수정 권한이 확인되지 않았습니다.");
+  }
+}
+
 async function persistCard(card) {
   if (!sharedStorageAvailable) return;
 
@@ -36,6 +64,18 @@ async function deleteRemoteStory(storyId, password) {
     body: JSON.stringify({
       target_story_id: storyId,
       plain_password: password,
+    }),
+  });
+
+  return result === true;
+}
+
+async function deleteRemoteStoryWithKey(storyId, credential) {
+  const result = await supabaseFetch("/rest/v1/rpc/delete_story_with_key", {
+    method: "POST",
+    body: JSON.stringify({
+      target_story_id: storyId,
+      plain_key: credential,
     }),
   });
 

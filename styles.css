@@ -717,26 +717,44 @@ main {
   margin: 20px 0 0;
 }
 
-.story-detail-list div {
+.story-detail-list label {
   display: grid;
   grid-template-columns: 150px minmax(0, 1fr);
   gap: 14px;
+  align-items: start;
   border: 1px solid rgba(23, 33, 27, 0.08);
   border-radius: 16px;
   padding: 13px 14px;
   background: rgba(255, 255, 255, 0.58);
 }
 
-.story-detail-list dt {
+.story-detail-list span {
   color: var(--forest);
   font-weight: 900;
 }
 
-.story-detail-list dd {
-  margin: 0;
+.story-detail-list input,
+.story-detail-list select,
+.story-detail-list textarea {
+  width: 100%;
+  border: 1px solid rgba(23, 33, 27, 0.14);
+  border-radius: 12px;
+  padding: 10px 11px;
   color: var(--ink);
+  background: rgba(255, 255, 255, 0.8);
   line-height: 1.65;
-  white-space: pre-wrap;
+  outline: 0;
+}
+
+.story-detail-list textarea {
+  resize: vertical;
+}
+
+.story-detail-list input:focus,
+.story-detail-list select:focus,
+.story-detail-list textarea:focus {
+  border-color: var(--forest);
+  box-shadow: 0 0 0 4px rgba(141, 175, 99, 0.18);
 }
 
 .tiny-button {
@@ -985,7 +1003,7 @@ main {
     flex-direction: column;
   }
 
-  .story-detail-list div {
+  .story-detail-list label {
     grid-template-columns: 1fr;
     gap: 6px;
   }

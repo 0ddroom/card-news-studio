@@ -666,7 +666,7 @@ function renderAll() {
 
 function renderDashboard() {
   elements.storyCount.textContent = stories.length;
-  elements.cardCount.textContent = cards.length;
+  if (elements.cardCount) elements.cardCount.textContent = cards.length;
   elements.divisionCount.textContent = new Set(stories.map((story) => story.division)).size;
 }
 
@@ -714,9 +714,7 @@ function renderStoryList() {
             <p>${escapeHtml(story.summary)}</p>
             <p><strong>정량적 성과:</strong> ${escapeHtml(story.impactMetric)}</p>
             <div class="story-actions">
-              <button class="tiny-button" type="button" data-start-card="${story.id}">카드뉴스 시안 제작</button>
-              <button class="tiny-button alt" type="button" data-view-story="${story.id}">전체 내용 확인</button>
-              <button class="tiny-button alt" type="button" data-delete-story="${story.id}">삭제</button>
+              <button class="tiny-button" type="button" data-view-story="${story.id}">전체 내용 확인</button>
             </div>
           </div>
         </article>
@@ -724,23 +722,9 @@ function renderStoryList() {
     )
     .join("");
 
-  $$("[data-start-card]").forEach((button) => {
-    button.addEventListener("click", () => {
-      showView("studio");
-      elements.storySelect.value = button.dataset.startCard;
-      updatePrompt();
-      drawPlaceholderCard();
-    });
-  });
-
   $$("[data-view-story]").forEach((button) => {
     button.addEventListener("click", () => handleStoryDetailView(button.dataset.viewStory));
   });
-
-  $$("[data-delete-story]").forEach((button) => {
-    button.addEventListener("click", () => handleStoryDelete(button.dataset.deleteStory));
-  });
-
 }
 
 async function handleStoryDetailView(storyId) {
@@ -770,7 +754,7 @@ async function handleStoryDetailView(storyId) {
     return;
   }
 
-  showStoryDetailDialog(story);
+  showStoryDetailDialog(story, credential);
 }
 
 async function handleStoryDelete(storyId) {
@@ -815,6 +799,27 @@ async function handleStoryDelete(storyId) {
     console.error("사례 삭제 실패", error);
     alert("사례를 삭제하지 못했습니다. Supabase 마이그레이션 SQL이 적용되었는지 확인해 주세요.");
   }
+}
+
+async function deleteStoryWithCredential(story, credential) {
+  if (sharedStorageAvailable) {
+    try {
+      const canDelete = await deleteRemoteStoryWithKey(story.id, credential);
+      if (!canDelete) throw new Error("비밀번호가 일치하지 않습니다.");
+    } catch (error) {
+      if (credential !== ADMIN_VIEW_KEY) {
+        const canDelete = await deleteRemoteStory(story.id, credential);
+        if (!canDelete) throw error;
+      } else {
+        throw error;
+      }
+    }
+  }
+
+  stories = stories.filter((item) => item.id !== story.id);
+  saveToStorage(STORAGE_KEYS.stories, stories);
+  renderAll();
+  drawPlaceholderCard();
 }
 
 function renderGallery() {
@@ -907,6 +912,34 @@ async function persistStory(story) {
   });
 }
 
+async function updateRemoteStory(story, credential) {
+  if (!sharedStorageAvailable) return;
+
+  const result = await supabaseFetch("/rest/v1/rpc/update_story_with_key", {
+    method: "POST",
+    body: JSON.stringify({
+      target_story_id: story.id,
+      plain_key: credential,
+      updated_report_month: story.reportMonth,
+      updated_division: story.division,
+      updated_owner: story.owner,
+      updated_email: story.email,
+      updated_title: story.title,
+      updated_period: story.period,
+      updated_participants: story.participants,
+      updated_summary: story.summary,
+      updated_impact_metric: story.impactMetric,
+      updated_evidence: story.evidence,
+      updated_quote: story.quote,
+      updated_desired_message: story.desiredMessage,
+    }),
+  });
+
+  if (result !== true) {
+    throw new Error("사례 수정 권한이 확인되지 않았습니다.");
+  }
+}
+
 async function persistCard(card) {
   if (!sharedStorageAvailable) return;
 
@@ -923,6 +956,18 @@ async function deleteRemoteStory(storyId, password) {
     body: JSON.stringify({
       target_story_id: storyId,
       plain_password: password,
+    }),
+  });
+
+  return result === true;
+}
+
+async function deleteRemoteStoryWithKey(storyId, credential) {
+  const result = await supabaseFetch("/rest/v1/rpc/delete_story_with_key", {
+    method: "POST",
+    body: JSON.stringify({
+      target_story_id: storyId,
+      plain_key: credential,
     }),
   });
 
@@ -1605,49 +1650,40 @@ function showCredentialDialog({ title, message, confirmText, cancelText }) {
   });
 }
 
-function showStoryDetailDialog(story) {
+function showStoryDetailDialog(story, credential) {
   const previous = document.querySelector(".confirm-backdrop");
   previous?.remove();
-
-  const rows = [
-    ["공유 월", story.reportMonth],
-    ["본부/실", story.division],
-    ["소속(팀/점/파트)", story.owner],
-    ["이름", story.email],
-    ["성과/활동 제목", story.title],
-    ["활동 기간", story.period],
-    ["참여 인원/대상", story.participants],
-    ["핵심 이야기", story.summary],
-    ["정량적 성과", story.impactMetric],
-    ["근거/에피소드", story.evidence],
-    ["고객/직원의 한마디", story.quote],
-    ["강조하고 싶은 문구", story.desiredMessage],
-  ];
 
   const backdrop = document.createElement("div");
   backdrop.className = "confirm-backdrop";
   backdrop.innerHTML = `
     <section class="confirm-dialog story-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="storyDetailTitle">
       <div class="story-detail-header">
-        <span class="pill">읽기 전용</span>
+        <span class="pill">내용 확인 및 수정</span>
         <h2 id="storyDetailTitle">${escapeHtml(story.title)}</h2>
       </div>
       ${story.imageData ? `<img class="story-detail-image" src="${story.imageData}" alt="${escapeHtml(story.title)} 참고 이미지" />` : ""}
-      <dl class="story-detail-list">
-        ${rows
-          .map(
-            ([label, value]) => `
-              <div>
-                <dt>${escapeHtml(label)}</dt>
-                <dd>${escapeHtml(value || "입력 없음")}</dd>
-              </div>
-            `,
-          )
-          .join("")}
-      </dl>
-      <div class="confirm-actions">
-        <button class="primary-action" type="button" data-close-action>닫기</button>
-      </div>
+      <form class="story-detail-form">
+        <div class="story-detail-list">
+          ${getStoryDetailField("공유 월", "reportMonth", story.reportMonth, "input", "month")}
+          ${getStoryDetailSelect("본부/실", "division", story.division)}
+          ${getStoryDetailField("소속(팀/점/파트)", "owner", story.owner)}
+          ${getStoryDetailField("이름", "email", story.email)}
+          ${getStoryDetailField("성과/활동 제목", "title", story.title)}
+          ${getStoryDetailField("활동 기간", "period", story.period)}
+          ${getStoryDetailField("참여 인원/대상", "participants", story.participants)}
+          ${getStoryDetailField("핵심 이야기", "summary", story.summary, "textarea")}
+          ${getStoryDetailField("정량적 성과", "impactMetric", story.impactMetric)}
+          ${getStoryDetailField("근거/에피소드", "evidence", story.evidence, "textarea")}
+          ${getStoryDetailField("고객/직원의 한마디", "quote", story.quote)}
+          ${getStoryDetailField("강조하고 싶은 문구", "desiredMessage", story.desiredMessage)}
+        </div>
+        <div class="confirm-actions">
+          <button class="primary-action" type="submit">수정 내용 저장</button>
+          <button class="primary-action danger-action" type="button" data-delete-action>삭제</button>
+          <button class="ghost-action" type="button" data-close-action>닫기</button>
+        </div>
+      </form>
     </section>
   `;
 
@@ -1663,10 +1699,92 @@ function showStoryDetailDialog(story) {
   backdrop.addEventListener("click", (event) => {
     if (event.target === backdrop) close();
   });
+  backdrop.querySelector(".story-detail-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const updatedStory = {
+      ...story,
+      reportMonth: formData.get("reportMonth").trim(),
+      division: formData.get("division").trim(),
+      owner: formData.get("owner").trim(),
+      email: formData.get("email").trim(),
+      title: formData.get("title").trim(),
+      period: formData.get("period").trim(),
+      participants: formData.get("participants").trim(),
+      summary: formData.get("summary").trim(),
+      impactMetric: formData.get("impactMetric").trim() || "정량적 성과는 운영 후 집계 예정",
+      evidence: formData.get("evidence").trim(),
+      cultureValue: formData.get("evidence").trim(),
+      quote: formData.get("quote").trim() || "관련된 한마디는 추후 공유 예정입니다.",
+      desiredMessage: formData.get("desiredMessage").trim(),
+    };
+
+    try {
+      await updateRemoteStory(updatedStory, credential);
+      stories = stories.map((item) => (item.id === updatedStory.id ? updatedStory : item));
+      saveToStorage(STORAGE_KEYS.stories, stories);
+      renderAll();
+      close();
+      alert("사례 내용이 수정되었습니다.");
+    } catch (error) {
+      console.error("사례 수정 실패", error);
+      alert("사례를 수정하지 못했습니다. Supabase 마이그레이션 SQL이 적용되었는지 확인해 주세요.");
+    }
+  });
+  backdrop.querySelector("[data-delete-action]").addEventListener("click", async () => {
+    const confirmed = await showConfirmDialog({
+      title: "사례 삭제",
+      message: "정말 삭제하시겠습니까? 삭제 후에는 되돌릴 수 없습니다.",
+      confirmText: "삭제",
+      cancelText: "돌아가기",
+    });
+
+    if (!confirmed) {
+      document.body.appendChild(backdrop);
+      return;
+    }
+
+    try {
+      await deleteStoryWithCredential(story, credential);
+      close();
+      alert("사례가 삭제되었습니다.");
+    } catch (error) {
+      console.error("사례 삭제 실패", error);
+      alert("사례를 삭제하지 못했습니다. Supabase 마이그레이션 SQL이 적용되었는지 확인해 주세요.");
+    }
+  });
   backdrop.querySelector("[data-close-action]").addEventListener("click", close);
   document.addEventListener("keydown", handleEscape);
   document.body.appendChild(backdrop);
   backdrop.querySelector("[data-close-action]").focus();
+}
+
+function getStoryDetailField(label, name, value, element = "input", type = "text") {
+  const escapedValue = escapeHtml(value || "");
+  const control =
+    element === "textarea"
+      ? `<textarea name="${name}" rows="4">${escapedValue}</textarea>`
+      : `<input name="${name}" type="${type}" value="${escapedValue}" />`;
+
+  return `
+    <label>
+      <span>${escapeHtml(label)}</span>
+      ${control}
+    </label>
+  `;
+}
+
+function getStoryDetailSelect(label, name, value) {
+  return `
+    <label>
+      <span>${escapeHtml(label)}</span>
+      <select name="${name}">
+        ${CURRENT_DIVISIONS.map(
+          (division) => `<option value="${escapeHtml(division)}" ${division === value ? "selected" : ""}>${escapeHtml(division)}</option>`,
+        ).join("")}
+      </select>
+    </label>
+  `;
 }
 
 function showConfirmDialog({ title, message, confirmText, cancelText }) {
