@@ -283,8 +283,11 @@ function bindNavigation() {
     button.addEventListener("click", () => showView(button.dataset.viewLink));
   });
 
-  const initialView = window.location.hash.replace("#", "") || "dashboard";
-  showView(initialView, { skipHash: true });
+  window.addEventListener("hashchange", () => {
+    showView(getCurrentViewFromHash(), { skipHash: true });
+  });
+
+  showView(getCurrentViewFromHash(), { skipHash: true });
 }
 
 function showView(viewId, options = {}) {
@@ -294,13 +297,20 @@ function showView(viewId, options = {}) {
   $$(".nav-link").forEach((link) => link.classList.toggle("is-active", link.dataset.viewLink === viewId));
 
   if (!options.skipHash) {
-    window.location.hash = viewId;
+    const nextHash = `#${viewId}`;
+    if (window.location.hash !== nextHash) {
+      window.location.hash = nextHash;
+    }
   }
 
   if (viewId === "studio") {
     populateStorySelect();
     updatePrompt();
   }
+}
+
+function getCurrentViewFromHash() {
+  return window.location.hash.replace("#", "") || "dashboard";
 }
 
 function bindForm() {
@@ -804,7 +814,7 @@ function renderStoryList() {
             <p>${escapeHtml(story.summary)}</p>
             <p><strong>강조하고 싶은 문구:</strong> ${escapeHtml(story.desiredMessage || story.title)}</p>
             <div class="story-actions">
-              <button class="tiny-button" type="button" data-view-story="${story.id}">전체 내용 확인</button>
+              <button class="tiny-button" type="button" data-view-story="${story.id}">내용 확인 및 수정</button>
             </div>
           </div>
         </article>
@@ -822,7 +832,7 @@ async function handleStoryDetailView(storyId) {
   if (!story) return;
 
   const input = await showCredentialDialog({
-    title: "전체 내용 확인",
+    title: "내용 확인 및 수정",
     message: "사례 공유 시 입력한 비밀번호를 입력해 주세요.",
     confirmText: "확인",
     cancelText: "돌아가기",

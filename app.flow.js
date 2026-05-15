@@ -28,8 +28,11 @@ function bindNavigation() {
     button.addEventListener("click", () => showView(button.dataset.viewLink));
   });
 
-  const initialView = window.location.hash.replace("#", "") || "dashboard";
-  showView(initialView, { skipHash: true });
+  window.addEventListener("hashchange", () => {
+    showView(getCurrentViewFromHash(), { skipHash: true });
+  });
+
+  showView(getCurrentViewFromHash(), { skipHash: true });
 }
 
 function showView(viewId, options = {}) {
@@ -39,13 +42,20 @@ function showView(viewId, options = {}) {
   $$(".nav-link").forEach((link) => link.classList.toggle("is-active", link.dataset.viewLink === viewId));
 
   if (!options.skipHash) {
-    window.location.hash = viewId;
+    const nextHash = `#${viewId}`;
+    if (window.location.hash !== nextHash) {
+      window.location.hash = nextHash;
+    }
   }
 
   if (viewId === "studio") {
     populateStorySelect();
     updatePrompt();
   }
+}
+
+function getCurrentViewFromHash() {
+  return window.location.hash.replace("#", "") || "dashboard";
 }
 
 function bindForm() {

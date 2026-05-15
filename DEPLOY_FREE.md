@@ -43,7 +43,7 @@ window.CARD_NEWS_STUDIO_CONFIG = {
 
 이미 Supabase 프로젝트를 만들어 운영 중이라면, `supabase/migrations/2026-05-password-delete.sql`을 Supabase SQL Editor에서 한 번 더 실행해 주세요.
 카드뉴스 시안 삭제 기능까지 함께 반영하려면 `supabase/migrations/2026-05-card-delete.sql`도 이어서 실행해 주세요.
-공유 사례의 전체 내용 확인 후 수정/삭제 기능을 반영하려면 `supabase/migrations/2026-05-story-manage.sql`도 실행해 주세요.
+공유 사례의 내용 확인 및 수정/삭제 기능을 반영하려면 `supabase/migrations/2026-05-story-manage.sql`도 실행해 주세요.
 관리자 확인 키 변경을 반영하려면 `supabase/migrations/2026-05-admin-key-update.sql`도 실행해 주세요.
 
 이 SQL은 아래 기능을 추가합니다.
