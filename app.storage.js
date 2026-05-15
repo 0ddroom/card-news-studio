@@ -1,6 +1,6 @@
 async function fetchRemoteStories() {
   const rows = await supabaseFetch(
-    "/rest/v1/stories?select=id,created_at,report_month,division,owner,email,title,period,participants,summary,impact_metric,evidence,culture_value,quote,desired_message,image_name,image_url&order=created_at.desc",
+    "/rest/v1/stories?select=id,created_at,report_month,division,owner,email,title,period,participants,summary,impact_metric,evidence,culture_value,quote,desired_message,password_hash,image_name,image_url&order=created_at.desc",
   );
   return Array.isArray(rows) ? rows.map(mapRemoteStory) : [];
 }

@@ -6,6 +6,7 @@ const STORAGE_KEYS = {
 const appConfig = normalizeConfig(window.CARD_NEWS_STUDIO_CONFIG);
 const sharedStorageEnabled = Boolean(appConfig.supabaseUrl && appConfig.supabaseAnonKey);
 let sharedStorageAvailable = sharedStorageEnabled;
+const ADMIN_VIEW_KEY = "successlog";
 
 const templates = [
   {

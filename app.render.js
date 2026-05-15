@@ -58,6 +58,7 @@ function renderStoryList() {
             <p><strong>정량적 성과:</strong> ${escapeHtml(story.impactMetric)}</p>
             <div class="story-actions">
               <button class="tiny-button" type="button" data-start-card="${story.id}">카드뉴스 시안 제작</button>
+              <button class="tiny-button alt" type="button" data-view-story="${story.id}">전체 내용 확인</button>
               <button class="tiny-button alt" type="button" data-delete-story="${story.id}">삭제</button>
             </div>
           </div>
@@ -75,10 +76,44 @@ function renderStoryList() {
     });
   });
 
+  $$("[data-view-story]").forEach((button) => {
+    button.addEventListener("click", () => handleStoryDetailView(button.dataset.viewStory));
+  });
+
   $$("[data-delete-story]").forEach((button) => {
     button.addEventListener("click", () => handleStoryDelete(button.dataset.deleteStory));
   });
 
+}
+
+async function handleStoryDetailView(storyId) {
+  const story = stories.find((item) => item.id === storyId);
+  if (!story) return;
+
+  const input = await showCredentialDialog({
+    title: "전체 내용 확인",
+    message: "사례 공유 시 입력한 삭제 비밀번호 또는 관리자 키를 입력해 주세요.",
+    confirmText: "확인",
+    cancelText: "돌아가기",
+  });
+
+  if (input === null) return;
+
+  const credential = input.trim();
+  if (!credential) {
+    alert("비밀번호 또는 관리자 키를 입력해 주세요.");
+    return;
+  }
+
+  const isAdmin = credential === ADMIN_VIEW_KEY;
+  const isOwner = story.passwordHash && story.passwordHash === (await hashText(credential));
+
+  if (!isAdmin && !isOwner) {
+    alert("비밀번호 또는 관리자 키가 일치하지 않습니다.");
+    return;
+  }
+
+  showStoryDetailDialog(story);
 }
 
 async function handleStoryDelete(storyId) {

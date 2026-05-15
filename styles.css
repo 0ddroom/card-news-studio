@@ -637,6 +637,8 @@ main {
 
 .confirm-dialog {
   width: min(460px, 100%);
+  max-height: min(86vh, 900px);
+  overflow: auto;
   border: 1px solid rgba(255, 255, 255, 0.76);
   border-radius: 28px;
   padding: 28px;
@@ -662,6 +664,81 @@ main {
   justify-content: flex-end;
   gap: 10px;
   margin-top: 24px;
+}
+
+.credential-form {
+  display: grid;
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.credential-field {
+  display: grid;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 900;
+}
+
+.credential-field input {
+  width: 100%;
+  border: 1px solid rgba(23, 33, 27, 0.18);
+  border-radius: 14px;
+  padding: 13px 14px;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.82);
+  outline: 0;
+}
+
+.credential-field input:focus {
+  border-color: var(--forest);
+  box-shadow: 0 0 0 4px rgba(141, 175, 99, 0.22);
+}
+
+.story-detail-dialog {
+  width: min(760px, 100%);
+}
+
+.story-detail-header {
+  display: grid;
+  gap: 12px;
+}
+
+.story-detail-image {
+  display: block;
+  width: 100%;
+  max-height: 280px;
+  margin-top: 18px;
+  border-radius: 22px;
+  object-fit: cover;
+}
+
+.story-detail-list {
+  display: grid;
+  gap: 10px;
+  margin: 20px 0 0;
+}
+
+.story-detail-list div {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: 14px;
+  border: 1px solid rgba(23, 33, 27, 0.08);
+  border-radius: 16px;
+  padding: 13px 14px;
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.story-detail-list dt {
+  color: var(--forest);
+  font-weight: 900;
+}
+
+.story-detail-list dd {
+  margin: 0;
+  color: var(--ink);
+  line-height: 1.65;
+  white-space: pre-wrap;
 }
 
 .tiny-button {
@@ -904,6 +981,15 @@ main {
   .toolbar {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .confirm-actions {
+    flex-direction: column;
+  }
+
+  .story-detail-list div {
+    grid-template-columns: 1fr;
+    gap: 6px;
   }
 
   .template-table,

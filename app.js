@@ -6,6 +6,7 @@ const STORAGE_KEYS = {
 const appConfig = normalizeConfig(window.CARD_NEWS_STUDIO_CONFIG);
 const sharedStorageEnabled = Boolean(appConfig.supabaseUrl && appConfig.supabaseAnonKey);
 let sharedStorageAvailable = sharedStorageEnabled;
+const ADMIN_VIEW_KEY = "successlog";
 
 const templates = [
   {
@@ -714,6 +715,7 @@ function renderStoryList() {
             <p><strong>정량적 성과:</strong> ${escapeHtml(story.impactMetric)}</p>
             <div class="story-actions">
               <button class="tiny-button" type="button" data-start-card="${story.id}">카드뉴스 시안 제작</button>
+              <button class="tiny-button alt" type="button" data-view-story="${story.id}">전체 내용 확인</button>
               <button class="tiny-button alt" type="button" data-delete-story="${story.id}">삭제</button>
             </div>
           </div>
@@ -731,10 +733,44 @@ function renderStoryList() {
     });
   });
 
+  $$("[data-view-story]").forEach((button) => {
+    button.addEventListener("click", () => handleStoryDetailView(button.dataset.viewStory));
+  });
+
   $$("[data-delete-story]").forEach((button) => {
     button.addEventListener("click", () => handleStoryDelete(button.dataset.deleteStory));
   });
 
+}
+
+async function handleStoryDetailView(storyId) {
+  const story = stories.find((item) => item.id === storyId);
+  if (!story) return;
+
+  const input = await showCredentialDialog({
+    title: "전체 내용 확인",
+    message: "사례 공유 시 입력한 삭제 비밀번호 또는 관리자 키를 입력해 주세요.",
+    confirmText: "확인",
+    cancelText: "돌아가기",
+  });
+
+  if (input === null) return;
+
+  const credential = input.trim();
+  if (!credential) {
+    alert("비밀번호 또는 관리자 키를 입력해 주세요.");
+    return;
+  }
+
+  const isAdmin = credential === ADMIN_VIEW_KEY;
+  const isOwner = story.passwordHash && story.passwordHash === (await hashText(credential));
+
+  if (!isAdmin && !isOwner) {
+    alert("비밀번호 또는 관리자 키가 일치하지 않습니다.");
+    return;
+  }
+
+  showStoryDetailDialog(story);
 }
 
 async function handleStoryDelete(storyId) {
@@ -851,7 +887,7 @@ async function handleCardDelete(cardId) {
 
 async function fetchRemoteStories() {
   const rows = await supabaseFetch(
-    "/rest/v1/stories?select=id,created_at,report_month,division,owner,email,title,period,participants,summary,impact_metric,evidence,culture_value,quote,desired_message,image_name,image_url&order=created_at.desc",
+    "/rest/v1/stories?select=id,created_at,report_month,division,owner,email,title,period,participants,summary,impact_metric,evidence,culture_value,quote,desired_message,password_hash,image_name,image_url&order=created_at.desc",
   );
   return Array.isArray(rows) ? rows.map(mapRemoteStory) : [];
 }
@@ -1520,6 +1556,118 @@ function drawEllipsizedText(context, text, x, y, maxWidth) {
   }
 
   context.fillText(output.length < String(text || "").length ? `${output}...` : output, x, y);
+}
+
+function showCredentialDialog({ title, message, confirmText, cancelText }) {
+  return new Promise((resolve) => {
+    const previous = document.querySelector(".confirm-backdrop");
+    previous?.remove();
+
+    const backdrop = document.createElement("div");
+    backdrop.className = "confirm-backdrop";
+    backdrop.innerHTML = `
+      <section class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="credentialDialogTitle">
+        <h2 id="credentialDialogTitle">${escapeHtml(title)}</h2>
+        <p>${escapeHtml(message)}</p>
+        <form class="credential-form">
+          <label class="credential-field">
+            비밀번호 또는 관리자 키
+            <input type="password" name="credential" autocomplete="current-password" />
+          </label>
+          <div class="confirm-actions">
+            <button class="primary-action" type="submit">${escapeHtml(confirmText)}</button>
+            <button class="ghost-action" type="button" data-cancel-action>${escapeHtml(cancelText)}</button>
+          </div>
+        </form>
+      </section>
+    `;
+
+    const close = (result) => {
+      document.removeEventListener("keydown", handleEscape);
+      backdrop.remove();
+      resolve(result);
+    };
+
+    const handleEscape = (event) => {
+      if (event.key === "Escape") close(null);
+    };
+
+    backdrop.addEventListener("click", (event) => {
+      if (event.target === backdrop) close(null);
+    });
+    backdrop.querySelector(".credential-form").addEventListener("submit", (event) => {
+      event.preventDefault();
+      close(new FormData(event.currentTarget).get("credential") || "");
+    });
+    backdrop.querySelector("[data-cancel-action]").addEventListener("click", () => close(null));
+    document.addEventListener("keydown", handleEscape);
+    document.body.appendChild(backdrop);
+    backdrop.querySelector("input").focus();
+  });
+}
+
+function showStoryDetailDialog(story) {
+  const previous = document.querySelector(".confirm-backdrop");
+  previous?.remove();
+
+  const rows = [
+    ["공유 월", story.reportMonth],
+    ["본부/실", story.division],
+    ["소속(팀/점/파트)", story.owner],
+    ["이름", story.email],
+    ["성과/활동 제목", story.title],
+    ["활동 기간", story.period],
+    ["참여 인원/대상", story.participants],
+    ["핵심 이야기", story.summary],
+    ["정량적 성과", story.impactMetric],
+    ["근거/에피소드", story.evidence],
+    ["고객/직원의 한마디", story.quote],
+    ["강조하고 싶은 문구", story.desiredMessage],
+  ];
+
+  const backdrop = document.createElement("div");
+  backdrop.className = "confirm-backdrop";
+  backdrop.innerHTML = `
+    <section class="confirm-dialog story-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="storyDetailTitle">
+      <div class="story-detail-header">
+        <span class="pill">읽기 전용</span>
+        <h2 id="storyDetailTitle">${escapeHtml(story.title)}</h2>
+      </div>
+      ${story.imageData ? `<img class="story-detail-image" src="${story.imageData}" alt="${escapeHtml(story.title)} 참고 이미지" />` : ""}
+      <dl class="story-detail-list">
+        ${rows
+          .map(
+            ([label, value]) => `
+              <div>
+                <dt>${escapeHtml(label)}</dt>
+                <dd>${escapeHtml(value || "입력 없음")}</dd>
+              </div>
+            `,
+          )
+          .join("")}
+      </dl>
+      <div class="confirm-actions">
+        <button class="primary-action" type="button" data-close-action>닫기</button>
+      </div>
+    </section>
+  `;
+
+  const close = () => {
+    document.removeEventListener("keydown", handleEscape);
+    backdrop.remove();
+  };
+
+  const handleEscape = (event) => {
+    if (event.key === "Escape") close();
+  };
+
+  backdrop.addEventListener("click", (event) => {
+    if (event.target === backdrop) close();
+  });
+  backdrop.querySelector("[data-close-action]").addEventListener("click", close);
+  document.addEventListener("keydown", handleEscape);
+  document.body.appendChild(backdrop);
+  backdrop.querySelector("[data-close-action]").focus();
 }
 
 function showConfirmDialog({ title, message, confirmText, cancelText }) {
