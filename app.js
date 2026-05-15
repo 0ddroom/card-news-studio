@@ -329,9 +329,8 @@ function bindForm() {
         );
       }
     } catch (error) {
-      console.error("이미지 업로드 실패", error);
-      alert("공용 저장소에 이미지를 업로드하지 못했습니다. Supabase 설정과 스토리지 버킷을 확인해 주세요.");
-      return;
+      console.warn("참고 이미지 공용 저장소 업로드 실패, 압축 이미지 직접 저장으로 대체합니다.", error);
+      imageData = compressedImage;
     }
 
     const passwordHash = await hashText(formData.get("deletePassword").trim());
@@ -426,7 +425,7 @@ function clearValidationAlert() {
 async function compressImage(file) {
   const dataUrl = await readFileAsDataURL(file);
   const image = await loadImage(dataUrl);
-  const maxSize = 1400;
+  const maxSize = 1000;
   const scale = Math.min(1, maxSize / Math.max(image.width, image.height));
   const width = Math.round(image.width * scale);
   const height = Math.round(image.height * scale);
@@ -436,7 +435,7 @@ async function compressImage(file) {
 
   const context = canvas.getContext("2d");
   context.drawImage(image, 0, 0, width, height);
-  return canvas.toDataURL("image/jpeg", 0.86);
+  return canvas.toDataURL("image/jpeg", 0.78);
 }
 
 function readFileAsDataURL(file) {
