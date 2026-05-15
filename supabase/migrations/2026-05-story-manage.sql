@@ -7,7 +7,7 @@ security definer
 set search_path = public, extensions
 as $$
 begin
-  if plain_key = 'successlog' then
+  if plain_key = 'successl5g' then
     return true;
   end if;
 

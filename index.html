@@ -30,6 +30,9 @@
             <p>
               각 소속별로 자랑하고 싶은 사례(고객 가치 혁신 관련 성과 및 활동)를 공유해주세요!
             </p>
+            <p>
+              공유해주신 사례를 바탕으로 카드 뉴스를 제작하여 그룹웨어에 게시할 예정입니다 😊
+            </p>
             <div class="hero-actions">
               <button class="primary-action" type="button" data-view-link="collect">사례 공유하기</button>
               <button class="secondary-action" type="button" data-view-link="archive">공유된 사례 보기</button>
@@ -42,20 +45,32 @@
         <section class="view is-visible" id="dashboard" aria-labelledby="dashboard-title">
           <div class="section-heading">
             <p class="eyebrow">Overview</p>
-            <h2 id="dashboard-title">이달의 성공로그 수집 현황</h2>
-            <p>수집된 사례와 참여 본부/실 수를 한눈에 확인합니다.</p>
+            <h2 id="dashboard-title">성공로그 기록 현황</h2>
+            <p>공유해주신 성과/활동 사례 건수를 한눈에 확인합니다.</p>
           </div>
 
           <div class="metric-grid">
             <article class="metric-card">
-              <span>수집된 사례</span>
               <strong id="storyCount">0</strong>
-              <small>공유된 사례 수</small>
+              <small>총 누적 성공로그 건수</small>
             </article>
             <article class="metric-card">
-              <span>참여 소속</span>
-              <strong id="divisionCount">0</strong>
-              <small>참여 본부/실 수</small>
+              <strong id="currentMonthCount">0</strong>
+              <small>이달의 성공로그 건수</small>
+            </article>
+            <article class="metric-card top-division-card">
+              <div class="division-podium" id="topDivisionRankList" aria-label="성공로그 공유 건수 상위 본부/실">
+                <svg class="podium-line" viewBox="0 0 300 120" role="img" aria-hidden="true" focusable="false">
+                  <path d="M18 100 V72 H104 V50 H196 V88 H282 V108" />
+                </svg>
+                <span class="podium-slot podium-silver" tabindex="0" title="기록 대기 중" data-tooltip="기록 대기 중" aria-label="은메달 기록 대기 중">
+                </span>
+                <span class="podium-slot podium-gold" tabindex="0" title="기록 대기 중" data-tooltip="기록 대기 중" aria-label="금메달 기록 대기 중">
+                </span>
+                <span class="podium-slot podium-bronze" tabindex="0" title="기록 대기 중" data-tooltip="기록 대기 중" aria-label="동메달 기록 대기 중">
+                </span>
+              </div>
+              <small class="ranking-rule-hint" tabindex="0" data-tooltip="동점인 경우 먼저 기록한 순서대로 표시">성공로그 공유 TOP3</small>
             </article>
           </div>
         </section>
@@ -169,7 +184,7 @@
           <div class="section-heading compact">
             <p class="eyebrow">Archive</p>
             <h2 id="archive-title">공유된 사례 목록</h2>
-            <p>다른 본부/실에서는 어떤 사례를 공유하셨을까요?<br />요약 내용을 확인하고 참고해 보세요.</p>
+            <p>다른 본부/실에서는 어떤 사례를 공유하셨을까요?<br />요약 내용을 확인하고 참고해 보세요. (전체 내용 확인은 작성자 및 관리자만 가능합니다)</p>
           </div>
 
           <div class="toolbar">

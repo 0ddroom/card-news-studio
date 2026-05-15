@@ -6,7 +6,19 @@ const STORAGE_KEYS = {
 const appConfig = normalizeConfig(window.CARD_NEWS_STUDIO_CONFIG);
 const sharedStorageEnabled = Boolean(appConfig.supabaseUrl && appConfig.supabaseAnonKey);
 let sharedStorageAvailable = sharedStorageEnabled;
-const ADMIN_VIEW_KEY = "successlog";
+const ADMIN_VIEW_KEY = "successl5g";
+const STORY_DETAIL_REQUIRED_FIELDS = [
+  { name: "reportMonth", label: "공유 월" },
+  { name: "division", label: "본부/실" },
+  { name: "owner", label: "소속(팀/점/파트)" },
+  { name: "email", label: "이름" },
+  { name: "title", label: "성과/활동 제목" },
+  { name: "period", label: "활동 기간" },
+  { name: "participants", label: "참여 인원/대상" },
+  { name: "summary", label: "핵심 이야기" },
+  { name: "evidence", label: "근거/에피소드" },
+  { name: "desiredMessage", label: "강조하고 싶은 문구" },
+];
 
 const templates = [
   {
@@ -96,6 +108,8 @@ const elements = {
   storyCount: $("#storyCount"),
   cardCount: $("#cardCount"),
   divisionCount: $("#divisionCount"),
+  currentMonthCount: $("#currentMonthCount"),
+  topDivisionRankList: $("#topDivisionRankList"),
   storyList: $("#storyList"),
   storySearch: $("#storySearch"),
   monthFilter: $("#monthFilter"),

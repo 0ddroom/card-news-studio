@@ -6,7 +6,19 @@ const STORAGE_KEYS = {
 const appConfig = normalizeConfig(window.CARD_NEWS_STUDIO_CONFIG);
 const sharedStorageEnabled = Boolean(appConfig.supabaseUrl && appConfig.supabaseAnonKey);
 let sharedStorageAvailable = sharedStorageEnabled;
-const ADMIN_VIEW_KEY = "successlog";
+const ADMIN_VIEW_KEY = "successl5g";
+const STORY_DETAIL_REQUIRED_FIELDS = [
+  { name: "reportMonth", label: "공유 월" },
+  { name: "division", label: "본부/실" },
+  { name: "owner", label: "소속(팀/점/파트)" },
+  { name: "email", label: "이름" },
+  { name: "title", label: "성과/활동 제목" },
+  { name: "period", label: "활동 기간" },
+  { name: "participants", label: "참여 인원/대상" },
+  { name: "summary", label: "핵심 이야기" },
+  { name: "evidence", label: "근거/에피소드" },
+  { name: "desiredMessage", label: "강조하고 싶은 문구" },
+];
 
 const templates = [
   {
@@ -96,6 +108,8 @@ const elements = {
   storyCount: $("#storyCount"),
   cardCount: $("#cardCount"),
   divisionCount: $("#divisionCount"),
+  currentMonthCount: $("#currentMonthCount"),
+  topDivisionRankList: $("#topDivisionRankList"),
   storyList: $("#storyList"),
   storySearch: $("#storySearch"),
   monthFilter: $("#monthFilter"),
@@ -461,7 +475,7 @@ function fillSampleStory() {
     "그동안 부서별 성과와 활동이 개별적으로 공유되어 전사 관점의 학습과 확산이 어려웠습니다. 성공로그는 담당자가 직접 사례를 공유하고, 카드뉴스로 보기 쉽게 정리해 좋은 시도가 조직 안에서 더 빠르게 발견되도록 돕습니다.";
   $("#quote").value = "좋은 성과와 시도가 조직 안에서 더 자주 발견되고 연결되었으면 합니다.";
   $("#desiredMessage").value = "우리의 성공 경험을 기록하고, 더 큰 고객 가치로 연결합니다.";
-  $("#deletePassword").value = "successlog";
+  $("#deletePassword").value = "sample1234";
   clearValidationAlert();
 }
 
@@ -667,7 +681,84 @@ function renderAll() {
 function renderDashboard() {
   elements.storyCount.textContent = stories.length;
   if (elements.cardCount) elements.cardCount.textContent = cards.length;
-  elements.divisionCount.textContent = new Set(stories.map((story) => story.division)).size;
+  if (elements.divisionCount) elements.divisionCount.textContent = new Set(stories.map((story) => story.division)).size;
+
+  const currentMonth = getCurrentReportMonth();
+  const currentMonthStories = stories.filter((story) => story.reportMonth === currentMonth);
+  if (elements.currentMonthCount) elements.currentMonthCount.textContent = currentMonthStories.length;
+
+  renderTopDivisionRanks(getTopDivisionsByStoryCount(stories));
+}
+
+function renderTopDivisionRanks(topDivisions) {
+  if (!elements.topDivisionRankList) return;
+
+  const podiumSlots = [
+    { rankIndex: 1, medal: "silver", label: "2위" },
+    { rankIndex: 0, medal: "gold", label: "1위" },
+    { rankIndex: 2, medal: "bronze", label: "3위" },
+  ];
+
+  elements.topDivisionRankList.innerHTML = `
+    <svg class="podium-line" viewBox="0 0 300 120" role="img" aria-hidden="true" focusable="false">
+      <path d="M18 100 V72 H104 V50 H196 V88 H282 V108" />
+    </svg>
+    ${podiumSlots
+    .map(({ rankIndex, medal, label }) => {
+      const division = topDivisions[rankIndex]?.division || "기록 대기 중";
+      const count = topDivisions[rankIndex]?.count;
+      const tooltip = count ? `${division} · ${count}건` : division;
+
+      return `
+        <span class="podium-slot podium-${medal}" tabindex="0" title="${escapeHtml(tooltip)}" data-tooltip="${escapeHtml(tooltip)}" aria-label="${escapeHtml(`${label} ${tooltip}`)}">
+        </span>
+      `;
+    })
+    .join("")}
+  `;
+}
+
+function getCurrentReportMonth() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  return `${year}-${month}`;
+}
+
+function getTopDivisionsByStoryCount(items) {
+  const counts = items.reduce((accumulator, story, index) => {
+    const division = story.division || "소속 미입력";
+    const createdTime = getStoryCreatedTime(story);
+    const current = accumulator.get(division) || {
+      division,
+      count: 0,
+      firstCreatedTime: Number.POSITIVE_INFINITY,
+      firstIndex: index,
+    };
+
+    current.count += 1;
+
+    if (createdTime < current.firstCreatedTime) {
+      current.firstCreatedTime = createdTime;
+      current.firstIndex = index;
+    } else if (!Number.isFinite(createdTime) && !Number.isFinite(current.firstCreatedTime)) {
+      current.firstIndex = Math.min(current.firstIndex, index);
+    }
+
+    accumulator.set(division, current);
+    return accumulator;
+  }, new Map());
+
+  return Array.from(counts.values()).sort((a, b) => {
+    if (b.count !== a.count) return b.count - a.count;
+    if (a.firstCreatedTime !== b.firstCreatedTime) return a.firstCreatedTime - b.firstCreatedTime;
+    return a.firstIndex - b.firstIndex;
+  });
+}
+
+function getStoryCreatedTime(story) {
+  const timestamp = Date.parse(story.createdAt || story.created_at || "");
+  return Number.isFinite(timestamp) ? timestamp : Number.POSITIVE_INFINITY;
 }
 
 function renderMonthFilter() {
@@ -712,7 +803,7 @@ function renderStoryList() {
             </div>
             <h3>${escapeHtml(story.title)}</h3>
             <p>${escapeHtml(story.summary)}</p>
-            <p><strong>정량적 성과:</strong> ${escapeHtml(story.impactMetric)}</p>
+            <p><strong>강조하고 싶은 문구:</strong> ${escapeHtml(story.desiredMessage || story.title)}</p>
             <div class="story-actions">
               <button class="tiny-button" type="button" data-view-story="${story.id}">전체 내용 확인</button>
             </div>
@@ -1701,6 +1792,14 @@ function showStoryDetailDialog(story, credential) {
   });
   backdrop.querySelector(".story-detail-form").addEventListener("submit", async (event) => {
     event.preventDefault();
+    const validation = validateStoryDetailForm(event.currentTarget);
+
+    if (!validation.isValid) {
+      alert(validation.missingLabels.map((label) => `‘${label}’ 칸을 입력하지 않으셨습니다.`).join("\n"));
+      validation.firstInvalid?.focus();
+      return;
+    }
+
     const formData = new FormData(event.currentTarget);
     const updatedStory = {
       ...story,
@@ -1757,6 +1856,28 @@ function showStoryDetailDialog(story, credential) {
   document.addEventListener("keydown", handleEscape);
   document.body.appendChild(backdrop);
   backdrop.querySelector("[data-close-action]").focus();
+}
+
+function validateStoryDetailForm(form) {
+  const missingLabels = [];
+  let firstInvalid = null;
+
+  STORY_DETAIL_REQUIRED_FIELDS.forEach(({ name, label }) => {
+    const field = form.elements[name];
+    const isMissing = !field || !field.value.trim();
+    field?.classList.toggle("is-invalid", isMissing);
+
+    if (isMissing) {
+      missingLabels.push(label);
+      firstInvalid ||= field;
+    }
+  });
+
+  return {
+    isValid: missingLabels.length === 0,
+    missingLabels,
+    firstInvalid,
+  };
 }
 
 function getStoryDetailField(label, name, value, element = "input", type = "text") {

@@ -10,7 +10,84 @@ function renderAll() {
 function renderDashboard() {
   elements.storyCount.textContent = stories.length;
   if (elements.cardCount) elements.cardCount.textContent = cards.length;
-  elements.divisionCount.textContent = new Set(stories.map((story) => story.division)).size;
+  if (elements.divisionCount) elements.divisionCount.textContent = new Set(stories.map((story) => story.division)).size;
+
+  const currentMonth = getCurrentReportMonth();
+  const currentMonthStories = stories.filter((story) => story.reportMonth === currentMonth);
+  if (elements.currentMonthCount) elements.currentMonthCount.textContent = currentMonthStories.length;
+
+  renderTopDivisionRanks(getTopDivisionsByStoryCount(stories));
+}
+
+function renderTopDivisionRanks(topDivisions) {
+  if (!elements.topDivisionRankList) return;
+
+  const podiumSlots = [
+    { rankIndex: 1, medal: "silver", label: "2위" },
+    { rankIndex: 0, medal: "gold", label: "1위" },
+    { rankIndex: 2, medal: "bronze", label: "3위" },
+  ];
+
+  elements.topDivisionRankList.innerHTML = `
+    <svg class="podium-line" viewBox="0 0 300 120" role="img" aria-hidden="true" focusable="false">
+      <path d="M18 100 V72 H104 V50 H196 V88 H282 V108" />
+    </svg>
+    ${podiumSlots
+    .map(({ rankIndex, medal, label }) => {
+      const division = topDivisions[rankIndex]?.division || "기록 대기 중";
+      const count = topDivisions[rankIndex]?.count;
+      const tooltip = count ? `${division} · ${count}건` : division;
+
+      return `
+        <span class="podium-slot podium-${medal}" tabindex="0" title="${escapeHtml(tooltip)}" data-tooltip="${escapeHtml(tooltip)}" aria-label="${escapeHtml(`${label} ${tooltip}`)}">
+        </span>
+      `;
+    })
+    .join("")}
+  `;
+}
+
+function getCurrentReportMonth() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  return `${year}-${month}`;
+}
+
+function getTopDivisionsByStoryCount(items) {
+  const counts = items.reduce((accumulator, story, index) => {
+    const division = story.division || "소속 미입력";
+    const createdTime = getStoryCreatedTime(story);
+    const current = accumulator.get(division) || {
+      division,
+      count: 0,
+      firstCreatedTime: Number.POSITIVE_INFINITY,
+      firstIndex: index,
+    };
+
+    current.count += 1;
+
+    if (createdTime < current.firstCreatedTime) {
+      current.firstCreatedTime = createdTime;
+      current.firstIndex = index;
+    } else if (!Number.isFinite(createdTime) && !Number.isFinite(current.firstCreatedTime)) {
+      current.firstIndex = Math.min(current.firstIndex, index);
+    }
+
+    accumulator.set(division, current);
+    return accumulator;
+  }, new Map());
+
+  return Array.from(counts.values()).sort((a, b) => {
+    if (b.count !== a.count) return b.count - a.count;
+    if (a.firstCreatedTime !== b.firstCreatedTime) return a.firstCreatedTime - b.firstCreatedTime;
+    return a.firstIndex - b.firstIndex;
+  });
+}
+
+function getStoryCreatedTime(story) {
+  const timestamp = Date.parse(story.createdAt || story.created_at || "");
+  return Number.isFinite(timestamp) ? timestamp : Number.POSITIVE_INFINITY;
 }
 
 function renderMonthFilter() {
@@ -55,7 +132,7 @@ function renderStoryList() {
             </div>
             <h3>${escapeHtml(story.title)}</h3>
             <p>${escapeHtml(story.summary)}</p>
-            <p><strong>정량적 성과:</strong> ${escapeHtml(story.impactMetric)}</p>
+            <p><strong>강조하고 싶은 문구:</strong> ${escapeHtml(story.desiredMessage || story.title)}</p>
             <div class="story-actions">
               <button class="tiny-button" type="button" data-view-story="${story.id}">전체 내용 확인</button>
             </div>

@@ -181,6 +181,14 @@ function showStoryDetailDialog(story, credential) {
   });
   backdrop.querySelector(".story-detail-form").addEventListener("submit", async (event) => {
     event.preventDefault();
+    const validation = validateStoryDetailForm(event.currentTarget);
+
+    if (!validation.isValid) {
+      alert(validation.missingLabels.map((label) => `‘${label}’ 칸을 입력하지 않으셨습니다.`).join("\n"));
+      validation.firstInvalid?.focus();
+      return;
+    }
+
     const formData = new FormData(event.currentTarget);
     const updatedStory = {
       ...story,
@@ -237,6 +245,28 @@ function showStoryDetailDialog(story, credential) {
   document.addEventListener("keydown", handleEscape);
   document.body.appendChild(backdrop);
   backdrop.querySelector("[data-close-action]").focus();
+}
+
+function validateStoryDetailForm(form) {
+  const missingLabels = [];
+  let firstInvalid = null;
+
+  STORY_DETAIL_REQUIRED_FIELDS.forEach(({ name, label }) => {
+    const field = form.elements[name];
+    const isMissing = !field || !field.value.trim();
+    field?.classList.toggle("is-invalid", isMissing);
+
+    if (isMissing) {
+      missingLabels.push(label);
+      firstInvalid ||= field;
+    }
+  });
+
+  return {
+    isValid: missingLabels.length === 0,
+    missingLabels,
+    firstInvalid,
+  };
 }
 
 function getStoryDetailField(label, name, value, element = "input", type = "text") {
