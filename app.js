@@ -379,6 +379,10 @@ function bindForm() {
       return;
     }
 
+    notifyStoryShared(story).catch((error) => {
+      console.warn("사례 공유 알림 메일 발송 실패", error);
+    });
+
     elements.form.reset();
     setDefaultMonth();
     clearValidationAlert();
@@ -1049,6 +1053,42 @@ async function persistStory(story) {
     headers: { Prefer: "return=minimal" },
     body: JSON.stringify(mapStoryToRemote(story)),
   });
+}
+
+async function notifyStoryShared(story) {
+  if (!sharedStorageAvailable) return;
+
+  const response = await fetch(`${appConfig.supabaseUrl}/functions/v1/notify-story`, {
+    method: "POST",
+    headers: {
+      apikey: appConfig.supabaseAnonKey,
+      Authorization: `Bearer ${appConfig.supabaseAnonKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      story: {
+        id: story.id,
+        division: story.division,
+        owner: story.owner,
+        email: story.email,
+        title: story.title,
+        summary: story.summary,
+      },
+      manageUrl: getStoryManageUrl(),
+    }),
+  });
+
+  if (!response.ok) {
+    const details = await response.text();
+    throw new Error(`알림 메일 요청 실패: ${response.status} ${details}`);
+  }
+}
+
+function getStoryManageUrl() {
+  const url = new URL(window.location.href);
+  url.search = "";
+  url.hash = "archive";
+  return url.toString();
 }
 
 async function updateRemoteStory(story, credential) {

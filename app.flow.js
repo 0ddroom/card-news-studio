@@ -120,6 +120,10 @@ function bindForm() {
       return;
     }
 
+    notifyStoryShared(story).catch((error) => {
+      console.warn("사례 공유 알림 메일 발송 실패", error);
+    });
+
     elements.form.reset();
     setDefaultMonth();
     clearValidationAlert();
