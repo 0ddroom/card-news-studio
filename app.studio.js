@@ -169,7 +169,7 @@ function updatePrompt() {
     `소속: ${story.division}`,
     `성과 제목: ${story.title}`,
     `활동 기간: ${story.period}`,
-    `참여 인원/대상: ${story.participants}`,
+    `참여 인원: ${story.participants}`,
     `핵심 메시지: ${story.desiredMessage}`,
     `정량적 성과: ${story.impactMetric}`,
     `이야기 요약: ${story.summary}`,

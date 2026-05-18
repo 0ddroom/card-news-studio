@@ -132,7 +132,7 @@ function renderStoryList() {
             </div>
             <h3>${escapeHtml(story.title)}</h3>
             <p>${escapeHtml(story.summary)}</p>
-            <p><strong>강조하고 싶은 문구:</strong> ${escapeHtml(story.desiredMessage || story.title)}</p>
+            <p><strong>강조 키워드/문구:</strong> ${escapeHtml(story.desiredMessage || story.title)}</p>
             <div class="story-actions">
               <button class="tiny-button" type="button" data-view-story="${story.id}">내용 확인 및 수정</button>
             </div>

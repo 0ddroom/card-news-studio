@@ -14,10 +14,10 @@ const STORY_DETAIL_REQUIRED_FIELDS = [
   { name: "email", label: "이름" },
   { name: "title", label: "성과/활동 제목" },
   { name: "period", label: "활동 기간" },
-  { name: "participants", label: "참여 인원/대상" },
+  { name: "participants", label: "참여 인원" },
   { name: "summary", label: "핵심 이야기" },
   { name: "evidence", label: "근거/에피소드" },
-  { name: "desiredMessage", label: "강조하고 싶은 문구" },
+  { name: "desiredMessage", label: "강조 키워드/문구" },
 ];
 const STORY_IMAGE_TARGET_BYTES = 3 * 1024 * 1024;
 const STORY_IMAGE_MAX_DIMENSION = 2400;

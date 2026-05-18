@@ -14,10 +14,10 @@ const STORY_DETAIL_REQUIRED_FIELDS = [
   { name: "email", label: "이름" },
   { name: "title", label: "성과/활동 제목" },
   { name: "period", label: "활동 기간" },
-  { name: "participants", label: "참여 인원/대상" },
+  { name: "participants", label: "참여 인원" },
   { name: "summary", label: "핵심 이야기" },
   { name: "evidence", label: "근거/에피소드" },
-  { name: "desiredMessage", label: "강조하고 싶은 문구" },
+  { name: "desiredMessage", label: "강조 키워드/문구" },
 ];
 const STORY_IMAGE_TARGET_BYTES = 3 * 1024 * 1024;
 const STORY_IMAGE_MAX_DIMENSION = 2400;
@@ -689,7 +689,7 @@ function updatePrompt() {
     `소속: ${story.division}`,
     `성과 제목: ${story.title}`,
     `활동 기간: ${story.period}`,
-    `참여 인원/대상: ${story.participants}`,
+    `참여 인원: ${story.participants}`,
     `핵심 메시지: ${story.desiredMessage}`,
     `정량적 성과: ${story.impactMetric}`,
     `이야기 요약: ${story.summary}`,
@@ -842,7 +842,7 @@ function renderStoryList() {
             </div>
             <h3>${escapeHtml(story.title)}</h3>
             <p>${escapeHtml(story.summary)}</p>
-            <p><strong>강조하고 싶은 문구:</strong> ${escapeHtml(story.desiredMessage || story.title)}</p>
+            <p><strong>강조 키워드/문구:</strong> ${escapeHtml(story.desiredMessage || story.title)}</p>
             <div class="story-actions">
               <button class="tiny-button" type="button" data-view-story="${story.id}">내용 확인 및 수정</button>
             </div>
@@ -1801,12 +1801,12 @@ function showStoryDetailDialog(story, credential) {
           ${getStoryDetailField("이름", "email", story.email)}
           ${getStoryDetailField("성과/활동 제목", "title", story.title)}
           ${getStoryDetailField("활동 기간", "period", story.period)}
-          ${getStoryDetailField("참여 인원/대상", "participants", story.participants)}
+          ${getStoryDetailField("참여 인원", "participants", story.participants)}
           ${getStoryDetailField("핵심 이야기", "summary", story.summary, "textarea")}
           ${getStoryDetailField("정량적 성과", "impactMetric", story.impactMetric)}
           ${getStoryDetailField("근거/에피소드", "evidence", story.evidence, "textarea")}
           ${getStoryDetailField("고객/직원의 한마디", "quote", story.quote)}
-          ${getStoryDetailField("강조하고 싶은 문구", "desiredMessage", story.desiredMessage)}
+          ${getStoryDetailField("강조 키워드/문구", "desiredMessage", story.desiredMessage)}
         </div>
         <div class="confirm-actions">
           <button class="primary-action" type="submit">수정 내용 저장</button>
