@@ -46,7 +46,7 @@
           <div class="section-heading">
             <p class="eyebrow">Overview</p>
             <h2 id="dashboard-title">성공로그 기록 현황</h2>
-            <p>공유해주신 성과/활동 사례 건수를 한눈에 확인합니다.</p>
+            <p class="heading-description">공유해주신 성과/활동 사례 건수를 한눈에 확인합니다.</p>
           </div>
 
           <div class="metric-grid">
@@ -174,6 +174,17 @@
                 </tbody>
               </table>
 
+              <label class="privacy-consent" for="privacyConsent">
+                <input id="privacyConsent" name="privacyConsent" type="checkbox" data-label="개인정보 수집 및 이용 동의" required />
+                <span>
+                  <strong>※ 개인정보 수집 및 이용 관련 고지</strong>
+                  <span>· 수집항목 : 소속, 이름</span>
+                  <span>· 수집목적 : 본부/실 성과·활동 사례 수집</span>
+                  <span>· 보유 및 이용기간 : 사례 삭제시까지 (단, 관계법령에 따름)</span>
+                  <span>개인정보 수집 및 이용에 거부하실 수 있으며 거부 시 사례를 공유하실 수 없습니다.</span>
+                </span>
+              </label>
+
               <div class="form-actions">
                 <button class="ghost-action" type="button" id="loadSample">샘플 사례 불러오기</button>
                 <button class="secondary-action" type="button" id="resetForm">입력 초기화</button>
@@ -187,7 +198,7 @@
           <div class="section-heading compact">
             <p class="eyebrow">Archive</p>
             <h2 id="archive-title">공유된 사례 목록</h2>
-            <p>다른 본부/실에서는 어떤 사례를 공유하셨을까요?<br />요약 내용을 확인하고 참고해 보세요. (전체 내용 확인·수정은 작성자 및 관리자만 가능합니다)</p>
+            <p class="heading-description">다른 본부/실에서는 어떤 사례를 공유하셨을까요?<br />요약 내용을 확인하고 참고해 보세요. (전체 내용 확인·수정은 작성자 및 관리자만 가능합니다)</p>
           </div>
 
           <div class="toolbar">

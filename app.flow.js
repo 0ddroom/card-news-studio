@@ -147,7 +147,8 @@ function validateStoryForm() {
 
   requiredFields.forEach((field) => {
     const isFile = field.type === "file";
-    const isMissing = isFile ? field.files.length === 0 : !field.value.trim();
+    const isCheckbox = field.type === "checkbox";
+    const isMissing = isFile ? field.files.length === 0 : isCheckbox ? !field.checked : !field.value.trim();
 
     field.classList.toggle("is-invalid", isMissing);
 
@@ -165,10 +166,18 @@ function validateStoryForm() {
 }
 
 function showValidationAlert(missingLabels) {
-  const message = missingLabels.map((label) => `‘${label}’ 칸을 입력하지 않으셨습니다.`).join("<br />");
+  const message = missingLabels.map(getValidationMessage).join("<br />");
   elements.validationAlert.innerHTML = `<strong>공유 전에 확인해 주세요.</strong>${message}`;
   elements.validationAlert.hidden = false;
-  alert(`${missingLabels[0]} 칸을 입력하지 않으셨습니다.`);
+  alert(getValidationMessage(missingLabels[0]).replace(/[‘’]/g, ""));
+}
+
+function getValidationMessage(label) {
+  if (label === "개인정보 수집 및 이용 동의") {
+    return `‘${label}’를 체크해 주세요.`;
+  }
+
+  return `‘${label}’ 칸을 입력하지 않으셨습니다.`;
 }
 
 function clearValidationAlert() {
