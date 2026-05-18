@@ -179,18 +179,44 @@ function clearValidationAlert() {
 
 async function compressImage(file) {
   const dataUrl = await readFileAsDataURL(file);
-  const image = await loadImage(dataUrl);
-  const maxSize = 1000;
-  const scale = Math.min(1, maxSize / Math.max(image.width, image.height));
-  const width = Math.round(image.width * scale);
-  const height = Math.round(image.height * scale);
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
+  if (file.size <= STORY_IMAGE_TARGET_BYTES) return dataUrl;
 
-  const context = canvas.getContext("2d");
-  context.drawImage(image, 0, 0, width, height);
-  return canvas.toDataURL("image/jpeg", 0.78);
+  const image = await loadImage(dataUrl);
+  const originalMaxDimension = Math.max(image.width, image.height);
+  let maxDimension = Math.min(STORY_IMAGE_MAX_DIMENSION, originalMaxDimension);
+  let bestDataUrl = dataUrl;
+
+  for (let sizeAttempt = 0; sizeAttempt < 8; sizeAttempt += 1) {
+    const scale = Math.min(1, maxDimension / originalMaxDimension);
+    const width = Math.max(1, Math.round(image.width * scale));
+    const height = Math.max(1, Math.round(image.height * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+
+    const context = canvas.getContext("2d");
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, width, height);
+    context.drawImage(image, 0, 0, width, height);
+
+    for (let quality = STORY_IMAGE_INITIAL_QUALITY; quality >= STORY_IMAGE_MIN_QUALITY; quality -= 0.05) {
+      bestDataUrl = canvas.toDataURL("image/jpeg", quality);
+      if (getDataUrlByteSize(bestDataUrl) <= STORY_IMAGE_TARGET_BYTES) {
+        return bestDataUrl;
+      }
+    }
+
+    const shrinkRatio = Math.max(0.72, Math.sqrt(STORY_IMAGE_TARGET_BYTES / getDataUrlByteSize(bestDataUrl)) * 0.96);
+    maxDimension = Math.max(1000, Math.floor(maxDimension * shrinkRatio));
+  }
+
+  return bestDataUrl;
+}
+
+function getDataUrlByteSize(dataUrl) {
+  const base64 = dataUrl.split(",")[1] || "";
+  const padding = base64.endsWith("==") ? 2 : base64.endsWith("=") ? 1 : 0;
+  return Math.floor((base64.length * 3) / 4) - padding;
 }
 
 function readFileAsDataURL(file) {

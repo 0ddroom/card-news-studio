@@ -19,6 +19,10 @@ const STORY_DETAIL_REQUIRED_FIELDS = [
   { name: "evidence", label: "근거/에피소드" },
   { name: "desiredMessage", label: "강조하고 싶은 문구" },
 ];
+const STORY_IMAGE_TARGET_BYTES = 3 * 1024 * 1024;
+const STORY_IMAGE_MAX_DIMENSION = 2400;
+const STORY_IMAGE_INITIAL_QUALITY = 0.92;
+const STORY_IMAGE_MIN_QUALITY = 0.72;
 
 const templates = [
   {
