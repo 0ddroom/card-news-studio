@@ -10,8 +10,8 @@ const ADMIN_VIEW_KEY = "successl5g";
 const STORY_DETAIL_REQUIRED_FIELDS = [
   { name: "reportMonth", label: "공유 월" },
   { name: "division", label: "본부/실" },
-  { name: "owner", label: "소속(팀/점/파트)" },
-  { name: "email", label: "이름" },
+  { name: "owner", label: "작성자 소속" },
+  { name: "email", label: "작성자 이름" },
   { name: "title", label: "성과/활동 제목" },
   { name: "period", label: "활동 기간" },
   { name: "participants", label: "참여 인원" },
@@ -1797,8 +1797,8 @@ function showStoryDetailDialog(story, credential) {
         <div class="story-detail-list">
           ${getStoryDetailField("공유 월", "reportMonth", story.reportMonth, "input", "month")}
           ${getStoryDetailSelect("본부/실", "division", story.division)}
-          ${getStoryDetailField("소속(팀/점/파트)", "owner", story.owner)}
-          ${getStoryDetailField("이름", "email", story.email)}
+          ${getStoryDetailField("작성자 소속", "owner", story.owner)}
+          ${getStoryDetailField("작성자 이름", "email", story.email)}
           ${getStoryDetailField("성과/활동 제목", "title", story.title)}
           ${getStoryDetailField("활동 기간", "period", story.period)}
           ${getStoryDetailField("참여 인원", "participants", story.participants)}

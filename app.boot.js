@@ -10,8 +10,8 @@ const ADMIN_VIEW_KEY = "successl5g";
 const STORY_DETAIL_REQUIRED_FIELDS = [
   { name: "reportMonth", label: "공유 월" },
   { name: "division", label: "본부/실" },
-  { name: "owner", label: "소속(팀/점/파트)" },
-  { name: "email", label: "이름" },
+  { name: "owner", label: "작성자 소속" },
+  { name: "email", label: "작성자 이름" },
   { name: "title", label: "성과/활동 제목" },
   { name: "period", label: "활동 기간" },
   { name: "participants", label: "참여 인원" },
