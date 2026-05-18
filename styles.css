@@ -357,6 +357,28 @@ main {
   font-weight: 900;
 }
 
+.section-heading .collect-guidance {
+  display: grid;
+  gap: 2px;
+  max-width: 860px;
+  margin-top: 12px;
+  color: var(--ink);
+  line-height: 1.65;
+}
+
+.section-heading .collect-guidance p {
+  max-width: none;
+  margin: 0;
+  color: inherit;
+  line-height: inherit;
+}
+
+.section-heading .collect-required-note {
+  margin: 16px 0 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
 .metric-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
