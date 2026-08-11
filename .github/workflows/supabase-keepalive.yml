@@ -1,0 +1,33 @@
+name: Keep Supabase Active
+
+on:
+  schedule:
+    # Four real database reads per day help keep the free project active.
+    - cron: "17 0,6,12,18 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ping-database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Read one story from Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "Supabase repository secrets are missing."
+            exit 1
+          fi
+
+          curl --silent --show-error --fail-with-body \
+            --output /dev/null \
+            --header "apikey: $SUPABASE_ANON_KEY" \
+            --header "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            "$SUPABASE_URL/rest/v1/stories?select=id&limit=1"
+
+          echo "Supabase database activity check completed."
