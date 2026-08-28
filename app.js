@@ -77,21 +77,21 @@ const toneCopy = {
 const CANVAS_TITLE_FONT = "Hahmlet, Noto Serif KR, Nanum Myeongjo, serif";
 const CANVAS_BODY_FONT = "Gowun Dodum, Noto Sans KR, Malgun Gothic, sans-serif";
 
-const CURRENT_DIVISIONS = ["경영기획실", "경영관리실", "eBiz본부", "점포사업본부", "IT지원실", "정보보안실"];
+const CURRENT_DIVISIONS = ["경영기획실", "경영지원실", "eBiz본부", "점포사업본부", "IT지원실", "정보보안실"];
 const LEGACY_DIVISION_MAP = {
-  경영지원실: "경영관리실",
+  경영관리실: "경영지원실",
   "인사/조직문화실": "경영기획실",
   영업본부: "점포사업본부",
   마케팅본부: "eBiz본부",
   제품본부: "eBiz본부",
   개발본부: "IT지원실",
   고객경험실: "eBiz본부",
-  재무실: "경영관리실",
+  재무실: "경영지원실",
   전략기획실: "경영기획실",
 };
 const TEAM_BY_DIVISION = {
   경영기획실: "인사지원팀",
-  경영관리실: "경영관리팀",
+  경영지원실: "경영관리팀",
   eBiz본부: "마케팅지원단",
   점포사업본부: "점포사업지원팀",
   IT지원실: "IT지원팀",
