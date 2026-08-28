@@ -1037,7 +1037,25 @@ async function fetchRemoteStories() {
   const rows = await supabaseFetch(
     "/rest/v1/stories?select=id,created_at,report_month,division,owner,email,title,period,participants,summary,impact_metric,evidence,culture_value,quote,desired_message,password_hash,image_name,image_url&order=created_at.desc",
   );
-  return Array.isArray(rows) ? rows.map(mapRemoteStory) : [];
+  if (!Array.isArray(rows)) return [];
+
+  return Promise.all(rows.map(mapRemoteStory).map(resolveLegacyStoryImage));
+}
+
+async function resolveLegacyStoryImage(story) {
+  if (!story.imageData?.startsWith("data:") || !story.imageName) return story;
+
+  const objectPath = getStoryImageObjectPath(story);
+  if (!objectPath) return story;
+
+  const storageUrl = getPublicStorageUrl(appConfig.storyBucket, objectPath);
+  try {
+    const response = await fetch(`${storageUrl}?check=${Date.now()}`, { method: "HEAD" });
+    return response.ok ? { ...story, imageData: storageUrl } : story;
+  } catch (error) {
+    console.warn("교체된 참고 이미지 확인에 실패했습니다.", error);
+    return story;
+  }
 }
 
 async function fetchRemoteCards() {
@@ -1180,7 +1198,7 @@ async function supabaseFetch(path, options = {}) {
   return text ? JSON.parse(text) : null;
 }
 
-async function uploadDataUrl(dataUrl, bucket, objectPath) {
+async function uploadDataUrl(dataUrl, bucket, objectPath, options = {}) {
   const blob = dataUrlToBlob(dataUrl);
   const encodedPath = encodeObjectPath(objectPath);
   const response = await fetch(`${appConfig.supabaseUrl}/storage/v1/object/${bucket}/${encodedPath}`, {
@@ -1190,6 +1208,7 @@ async function uploadDataUrl(dataUrl, bucket, objectPath) {
       Authorization: `Bearer ${appConfig.supabaseAnonKey}`,
       "Content-Type": blob.type,
       "x-upsert": "true",
+      ...(options.cacheControl ? { "cache-control": options.cacheControl } : {}),
     },
     body: blob,
   });
@@ -1199,7 +1218,54 @@ async function uploadDataUrl(dataUrl, bucket, objectPath) {
     throw new Error(`Supabase Storage 업로드 실패: ${response.status} ${details}`);
   }
 
-  return `${appConfig.supabaseUrl}/storage/v1/object/public/${bucket}/${encodedPath}`;
+  return getPublicStorageUrl(bucket, objectPath);
+}
+
+function getPublicStorageUrl(bucket, objectPath) {
+  return `${appConfig.supabaseUrl}/storage/v1/object/public/${bucket}/${encodeObjectPath(objectPath)}`;
+}
+
+function getStoryImageObjectPath(story) {
+  if (story.imageData && !story.imageData.startsWith("data:")) {
+    try {
+      const imageUrl = new URL(story.imageData);
+      const publicPrefix = `/storage/v1/object/public/${appConfig.storyBucket}/`;
+      const pathStart = imageUrl.pathname.indexOf(publicPrefix);
+      if (pathStart >= 0) {
+        return imageUrl.pathname
+          .slice(pathStart + publicPrefix.length)
+          .split("/")
+          .map(decodeURIComponent)
+          .join("/");
+      }
+    } catch (error) {
+      console.warn("기존 참고 이미지 저장 경로를 확인하지 못했습니다.", error);
+    }
+  }
+
+  if (!story.id || !story.imageName) return "";
+  return `stories/${story.id}-${sanitizeFileName(story.imageName)}`;
+}
+
+async function replaceStoryImage(story, file) {
+  const compressedImage = await compressImage(file);
+  if (!sharedStorageAvailable) {
+    return { imageData: compressedImage, imageName: file.name };
+  }
+
+  const objectPath = getStoryImageObjectPath(story);
+  if (!objectPath) {
+    throw new Error("기존 참고 이미지가 공용 저장소 파일이 아니어서 교체할 수 없습니다.");
+  }
+
+  const imageUrl = await uploadDataUrl(compressedImage, appConfig.storyBucket, objectPath, {
+    cacheControl: "no-cache",
+  });
+
+  return {
+    imageData: `${imageUrl}?v=${Date.now()}`,
+    imageName: file.name,
+  };
 }
 
 function dataUrlToBlob(dataUrl) {
@@ -1841,8 +1907,17 @@ function showStoryDetailDialog(story, credential) {
         <span class="pill">내용 확인 및 수정</span>
         <h2 id="storyDetailTitle">${escapeHtml(story.title)}</h2>
       </div>
-      ${story.imageData ? `<img class="story-detail-image" src="${story.imageData}" alt="${escapeHtml(story.title)} 참고 이미지" />` : ""}
       <form class="story-detail-form">
+        <div class="story-detail-image-editor">
+          <img class="story-detail-image" data-story-image-preview src="${escapeHtml(story.imageData || "")}" alt="${escapeHtml(story.title)} 참고 이미지" ${story.imageData ? "" : "hidden"} />
+          <label class="story-detail-image-field">
+            <span>참고 이미지</span>
+            <div>
+              <input name="referenceImage" type="file" accept="image/*" />
+              <p>새 이미지를 선택하면 기존 이미지를 교체합니다. 선택하지 않으면 현재 이미지가 유지됩니다.</p>
+            </div>
+          </label>
+        </div>
         <div class="story-detail-list">
           ${getStoryDetailField("공유 월", "reportMonth", story.reportMonth, "input", "month")}
           ${getStoryDetailSelect("본부/실", "division", story.division)}
@@ -1888,7 +1963,9 @@ function showStoryDetailDialog(story, credential) {
       return;
     }
 
-    const formData = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+    const replacementFile = form.elements.referenceImage?.files?.[0] || null;
     const updatedStory = {
       ...story,
       reportMonth: formData.get("reportMonth").trim(),
@@ -1906,16 +1983,40 @@ function showStoryDetailDialog(story, credential) {
       desiredMessage: formData.get("desiredMessage").trim(),
     };
 
+    const submitButton = form.querySelector('button[type="submit"]');
+    const originalSubmitText = submitButton.textContent;
+    submitButton.disabled = true;
+    submitButton.textContent = "저장 중...";
+
     try {
       await updateRemoteStory(updatedStory, credential);
+      let imageUpdateError = null;
+
+      if (replacementFile) {
+        try {
+          Object.assign(updatedStory, await replaceStoryImage(story, replacementFile));
+        } catch (error) {
+          imageUpdateError = error;
+          console.error("참고 이미지 교체 실패", error);
+        }
+      }
+
       stories = stories.map((item) => (item.id === updatedStory.id ? updatedStory : item));
       saveToStorage(STORAGE_KEYS.stories, stories);
       renderAll();
       close();
-      alert("사례 내용이 수정되었습니다.");
+      alert(
+        imageUpdateError
+          ? "글 내용은 저장되었지만 이미지를 교체하지 못했습니다. 잠시 후 다시 시도해 주세요."
+          : replacementFile
+            ? "사례 내용과 이미지가 수정되었습니다."
+            : "사례 내용이 수정되었습니다.",
+      );
     } catch (error) {
       console.error("사례 수정 실패", error);
       alert("사례를 수정하지 못했습니다. Supabase 마이그레이션 SQL이 적용되었는지 확인해 주세요.");
+      submitButton.disabled = false;
+      submitButton.textContent = originalSubmitText;
     }
   });
   backdrop.querySelector("[data-delete-action]").addEventListener("click", async () => {
@@ -1941,6 +2042,25 @@ function showStoryDetailDialog(story, credential) {
     }
   });
   backdrop.querySelector("[data-close-action]").addEventListener("click", close);
+  const imageInput = backdrop.querySelector('input[name="referenceImage"]');
+  const imagePreview = backdrop.querySelector("[data-story-image-preview]");
+  imageInput.addEventListener("change", async () => {
+    const selectedFile = imageInput.files?.[0];
+    if (!selectedFile) {
+      imagePreview.src = story.imageData || "";
+      imagePreview.hidden = !story.imageData;
+      return;
+    }
+
+    try {
+      imagePreview.src = await readFileAsDataURL(selectedFile);
+      imagePreview.hidden = false;
+    } catch (error) {
+      console.error("참고 이미지 미리보기 실패", error);
+      alert("선택한 이미지를 미리 볼 수 없습니다. 다른 이미지 파일을 선택해 주세요.");
+      imageInput.value = "";
+    }
+  });
   document.addEventListener("keydown", handleEscape);
   document.body.appendChild(backdrop);
   backdrop.querySelector("[data-close-action]").focus();

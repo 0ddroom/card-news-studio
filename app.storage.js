@@ -2,7 +2,25 @@ async function fetchRemoteStories() {
   const rows = await supabaseFetch(
     "/rest/v1/stories?select=id,created_at,report_month,division,owner,email,title,period,participants,summary,impact_metric,evidence,culture_value,quote,desired_message,password_hash,image_name,image_url&order=created_at.desc",
   );
-  return Array.isArray(rows) ? rows.map(mapRemoteStory) : [];
+  if (!Array.isArray(rows)) return [];
+
+  return Promise.all(rows.map(mapRemoteStory).map(resolveLegacyStoryImage));
+}
+
+async function resolveLegacyStoryImage(story) {
+  if (!story.imageData?.startsWith("data:") || !story.imageName) return story;
+
+  const objectPath = getStoryImageObjectPath(story);
+  if (!objectPath) return story;
+
+  const storageUrl = getPublicStorageUrl(appConfig.storyBucket, objectPath);
+  try {
+    const response = await fetch(`${storageUrl}?check=${Date.now()}`, { method: "HEAD" });
+    return response.ok ? { ...story, imageData: storageUrl } : story;
+  } catch (error) {
+    console.warn("교체된 참고 이미지 확인에 실패했습니다.", error);
+    return story;
+  }
 }
 
 async function fetchRemoteCards() {
@@ -145,7 +163,7 @@ async function supabaseFetch(path, options = {}) {
   return text ? JSON.parse(text) : null;
 }
 
-async function uploadDataUrl(dataUrl, bucket, objectPath) {
+async function uploadDataUrl(dataUrl, bucket, objectPath, options = {}) {
   const blob = dataUrlToBlob(dataUrl);
   const encodedPath = encodeObjectPath(objectPath);
   const response = await fetch(`${appConfig.supabaseUrl}/storage/v1/object/${bucket}/${encodedPath}`, {
@@ -155,6 +173,7 @@ async function uploadDataUrl(dataUrl, bucket, objectPath) {
       Authorization: `Bearer ${appConfig.supabaseAnonKey}`,
       "Content-Type": blob.type,
       "x-upsert": "true",
+      ...(options.cacheControl ? { "cache-control": options.cacheControl } : {}),
     },
     body: blob,
   });
@@ -164,7 +183,54 @@ async function uploadDataUrl(dataUrl, bucket, objectPath) {
     throw new Error(`Supabase Storage 업로드 실패: ${response.status} ${details}`);
   }
 
-  return `${appConfig.supabaseUrl}/storage/v1/object/public/${bucket}/${encodedPath}`;
+  return getPublicStorageUrl(bucket, objectPath);
+}
+
+function getPublicStorageUrl(bucket, objectPath) {
+  return `${appConfig.supabaseUrl}/storage/v1/object/public/${bucket}/${encodeObjectPath(objectPath)}`;
+}
+
+function getStoryImageObjectPath(story) {
+  if (story.imageData && !story.imageData.startsWith("data:")) {
+    try {
+      const imageUrl = new URL(story.imageData);
+      const publicPrefix = `/storage/v1/object/public/${appConfig.storyBucket}/`;
+      const pathStart = imageUrl.pathname.indexOf(publicPrefix);
+      if (pathStart >= 0) {
+        return imageUrl.pathname
+          .slice(pathStart + publicPrefix.length)
+          .split("/")
+          .map(decodeURIComponent)
+          .join("/");
+      }
+    } catch (error) {
+      console.warn("기존 참고 이미지 저장 경로를 확인하지 못했습니다.", error);
+    }
+  }
+
+  if (!story.id || !story.imageName) return "";
+  return `stories/${story.id}-${sanitizeFileName(story.imageName)}`;
+}
+
+async function replaceStoryImage(story, file) {
+  const compressedImage = await compressImage(file);
+  if (!sharedStorageAvailable) {
+    return { imageData: compressedImage, imageName: file.name };
+  }
+
+  const objectPath = getStoryImageObjectPath(story);
+  if (!objectPath) {
+    throw new Error("기존 참고 이미지가 공용 저장소 파일이 아니어서 교체할 수 없습니다.");
+  }
+
+  const imageUrl = await uploadDataUrl(compressedImage, appConfig.storyBucket, objectPath, {
+    cacheControl: "no-cache",
+  });
+
+  return {
+    imageData: `${imageUrl}?v=${Date.now()}`,
+    imageName: file.name,
+  };
 }
 
 function dataUrlToBlob(dataUrl) {
